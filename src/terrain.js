@@ -1,13 +1,8 @@
 import * as THREE from 'three';
 import { createEarthMaterial } from './materials.js';
 
-// Heights of the two built platforms above the plain, in metres.
-// Today the citadel mound stands about 12 m high (including a later Buddhist stupa);
-// the exact platform heights around 2500 BCE are not known.
-export const PLATFORM = {
-  citadel: 10,
-  lowerTown: 6,
-};
+// The two mounds are flattened to the plain here; the city's platforms are built as
+// separate crisp meshes (see city/). The mound masks still mark where the site is.
 
 const EDGE_FADE = 0.12; // fraction of the area at each edge blended to a flat horizon
 
@@ -98,7 +93,7 @@ export function buildTerrain({ meta, heights, masks }) {
   const dry = new THREE.Color('#b39a7c');
   const silt = new THREE.Color('#8d8066');
   const green = new THREE.Color('#878a62');
-  const mound = new THREE.Color('#b9876a');
+  const mound = new THREE.Color('#a98c6c');
   const tmp = new THREE.Color();
 
   for (let r = 0; r < grid; r++) {
@@ -106,11 +101,9 @@ export function buildTerrain({ meta, heights, masks }) {
       const i = r * grid + c;
       let h = plain[i] - ref;
 
-      const cit = smoothstep(0.42, 0.62, citadel[i]);
-      const low = smoothstep(0.42, 0.62, lower[i]);
-      const platform = Math.max(cit * PLATFORM.citadel, low * PLATFORM.lowerTown);
-      const onSite = Math.max(cit, low);
-      h = h * (1 - onSite) + 0 * onSite + platform;
+      // flatten the plain around the site (the platforms stand on it)
+      const onSite = smoothstep(0.05, 0.4, Math.max(citadel[i], lower[i]));
+      h = h * (1 - onSite);
 
       const wm = smoothstep(0.2, 0.8, water[i]);
       h = Math.max(h, waterLevel + 0.4) * (1 - wm) + (waterLevel - 2.5) * wm;
@@ -124,10 +117,8 @@ export function buildTerrain({ meta, heights, masks }) {
 
       const bank = smoothstep(0.02, 0.35, banks[i]);
       tmp.copy(dry).lerp(green, bank * 0.55).lerp(silt, wm);
-      tmp.lerp(mound, onSite * 0.7);
-      // a darker band where the platforms meet the plain, so their edges read from the air
-      const foot = smoothstep(0.15, 0.42, Math.max(citadel[i], lower[i])) * (1 - onSite);
-      tmp.multiplyScalar(1 - foot * 0.28);
+      // trodden ground around the city
+      tmp.lerp(mound, onSite * 0.35);
       colors[i * 3] = tmp.r;
       colors[i * 3 + 1] = tmp.g;
       colors[i * 3 + 2] = tmp.b;

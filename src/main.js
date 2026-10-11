@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { loadTerrainData, buildTerrain, createWater, createHorizonGround } from './terrain.js';
 import { createSky } from './sky.js';
+import { buildCity } from './city/index.js';
 import { createFlight, createCameraLimits } from './flight.js';
 import { createLabels, createNotePanel } from './ui.js';
 import { LANDSCAPE_NOTE, PLACE_LABELS } from './content/landscape.js';
@@ -40,11 +41,11 @@ scene.add(hemi);
 
 const sun = new THREE.DirectionalLight('#ffd3a0', 2.9);
 sun.castShadow = true;
-const shadowSize = lowPower ? 1024 : 2048;
+const shadowSize = lowPower ? 2048 : 4096;
 sun.shadow.mapSize.set(shadowSize, shadowSize);
-Object.assign(sun.shadow.camera, { left: -1400, right: 1400, top: 1400, bottom: -1400, near: 100, far: 7000 });
-sun.shadow.bias = -0.0005;
-sun.shadow.normalBias = 1.5;
+Object.assign(sun.shadow.camera, { left: -820, right: 820, top: 820, bottom: -820, near: 100, far: 7000 });
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.35;
 scene.add(sun);
 scene.add(sun.target);
 
@@ -56,7 +57,7 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.screenSpacePanning = false;
-controls.minDistance = 60;
+controls.minDistance = 25;
 controls.maxDistance = 3400;
 controls.maxPolarAngle = THREE.MathUtils.degToRad(80);
 controls.rotateSpeed = 0.5;
@@ -97,31 +98,45 @@ async function init() {
   scene.add(water);
   scene.add(createHorizonGround(terrain.edgeLevel));
 
-  const { citadel, lowerTown, river } = terrain.places;
-  const siteCenter = citadel.clone().lerp(lowerTown, 0.55);
-  siteCenter.y = terrain.heightAt(siteCenter.x, siteCenter.z);
+  const city = buildCity({ lowPower });
+  scene.add(city.group);
+  const groundAt = (x, z) => Math.max(terrain.heightAt(x, z), city.platformHeightAt(x, z));
+
+  const f = city.features;
+  const siteCenter = f.citadel.clone().lerp(f.lowerTown, 0.5);
+  siteCenter.y = groundAt(siteCenter.x, siteCenter.z);
 
   sun.target.position.copy(siteCenter);
   sun.position.copy(siteCenter).addScaledVector(sunDirection, 3500);
 
   // Seen from the south: the citadel on the left, the lower town in the middle, the river to the right.
-  const homeTarget = siteCenter.clone().add(portrait() ? new THREE.Vector3(260, 0, 260) : new THREE.Vector3(480, 0, 380));
-  homeTarget.y = terrain.heightAt(homeTarget.x, homeTarget.z);
-  const homeOffset = new THREE.Vector3(-150, 950, 1950).multiplyScalar(portrait() ? 1.3 : 1);
+  const homeTarget = siteCenter.clone().add(portrait() ? new THREE.Vector3(-20, 0, 60) : new THREE.Vector3(120, 0, 120));
+  homeTarget.y = groundAt(homeTarget.x, homeTarget.z);
+  const homeOffset = new THREE.Vector3(-80, 640, 1250).multiplyScalar(portrait() ? 1.2 : 1);
   home = { target: homeTarget, position: homeTarget.clone().add(homeOffset) };
 
   labels = createLabels(labelLayer, [
-    { text: PLACE_LABELS.citadel, position: citadel, lift: 28 },
-    { text: PLACE_LABELS.lowerTown, position: lowerTown, lift: 24 },
-    { text: PLACE_LABELS.river, position: river, lift: 14 },
+    { text: PLACE_LABELS.citadel, position: f.citadel, lift: 40, near: 700, far: 4200 },
+    { text: PLACE_LABELS.lowerTown, position: f.lowerTown, lift: 40, near: 700, far: 4200 },
+    { text: PLACE_LABELS.river, position: terrain.places.river, lift: 14, near: 300, far: 4200 },
+    { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900 },
+    { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500 },
+    { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500 },
   ]);
 
-  limit = createCameraLimits(camera, controls, terrain.heightAt);
+  limit = createCameraLimits(camera, controls, groundAt, { clearance: 8 });
   world = { terrain, siteCenter };
 
-  if (skipIntro) {
-    camera.position.copy(home.position);
-    controls.target.copy(home.target);
+  // test views: ?view=bath or ?view=street (start there, no intro)
+  const presets = {
+    bath: { target: f.greatBath.clone().setY(citadelTop(f)), offset: new THREE.Vector3(70, 65, 110) },
+    street: { target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 120)), offset: new THREE.Vector3(4, 24, 75) },
+  };
+  const preset = presets[params.get('view')];
+
+  if (skipIntro || preset) {
+    camera.position.copy(preset ? preset.target.clone().add(preset.offset) : home.position);
+    controls.target.copy(preset ? preset.target : home.target);
     begin('off', true);
   } else {
     // a slow, distant circle while the opening screen is up
@@ -133,6 +148,10 @@ async function init() {
     loading.hidden = true;
     opening.querySelectorAll('button[data-sound]').forEach((b) => (b.disabled = false));
   }
+}
+
+function citadelTop(f) {
+  return f.citadel.y;
 }
 
 function begin(sound, instant = false) {

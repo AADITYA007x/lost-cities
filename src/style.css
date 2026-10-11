@@ -9,6 +9,7 @@
   --excavated: #c98a5a;
   --inferred: #d4b26a;
   --simplified: #9fb3ad;
+  --imagined: #c9bfae;
   --serif: 'Cormorant Garamond', 'Iowan Old Style', Georgia, serif;
 }
 
@@ -289,6 +290,8 @@ h1 {
 .note-item.inferred .note-tag::before { border: 1px solid var(--inferred); }
 .note-item.simplified .note-tag { color: var(--simplified); }
 .note-item.simplified .note-tag::before { border: 1px dashed var(--simplified); }
+.note-item.imagined .note-tag { color: var(--imagined); }
+.note-item.imagined .note-tag::before { border: 1px dotted var(--imagined); }
 
 .sources li {
   font-size: 15px;

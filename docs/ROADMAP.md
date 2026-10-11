@@ -6,7 +6,8 @@ Each milestone runs, is tested at eye height and on a phone, and is committed be
 |---|---|---|
 | 0 | **Setup and deploy** | Vite + three.js scene, Worker with `/api/health`, auto-deploy from GitHub to Cloudflare. |
 | 1 | **Landscape** | Copernicus DEM terrain around the site, river (marked "inferred"), sky, fog, fly-over camera (desktop + touch). |
-| 2 | **The city** | Traced excavated walls (HR, DK, VS, SD areas) as JSON; procedural houses filling the rest; citadel mound with the Great Bath; brick shader; performance budget for phones. |
+| 2a | **The city (rules)** | Crisp platforms, main streets and drains, ~2,000 generated courtyard houses, the Great Bath, Great Hall, pillared hall; every element tagged excavated / inferred / imagined. |
+| 2b | **The city (traced)** | A local tracing page; walls of the excavated areas (HR, VS, DK, SD) traced from Marshall 1931 / Mackay 1938 replace generated houses there. |
 | 3 | **Certainty layer + info panel** | One control: "alive" / "evidence". Click any feature: what it was, what we know, how sure, sources. |
 | 4 | **Walk mode** | First person at eye height, WASD + touch, collision, minimap. |
 | 5 | **Time of day** | Sun from dawn to night, stars, warm night lamps (imagined). |

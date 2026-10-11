@@ -2,12 +2,12 @@ import * as THREE from 'three';
 
 // Quiet floating labels that follow places in the scene.
 export function createLabels(container, entries) {
-  const items = entries.map(({ text, position, lift = 0 }) => {
+  const items = entries.map(({ text, position, lift = 0, near = 0, far = 4200 }) => {
     const el = document.createElement('div');
     el.className = 'place-label';
     el.textContent = text;
     container.appendChild(el);
-    return { el, position: position.clone().add(new THREE.Vector3(0, lift, 0)) };
+    return { el, near, far, position: position.clone().add(new THREE.Vector3(0, lift, 0)) };
   });
 
   const v = new THREE.Vector3();
@@ -28,7 +28,8 @@ export function createLabels(container, entries) {
         const dist = camera.position.distanceTo(item.position);
         const sx = ((v.x + 1) / 2) * w;
         const edge = Math.min(sx, w - sx) / 90;
-        const fade = behind ? 0 : Math.min(1, Math.max(0, (4200 - dist) / 1500), Math.max(0, edge));
+        const range = Math.min((item.far - dist) / (item.far * 0.3), item.near ? (dist - item.near) / (item.near * 0.4) : 1);
+        const fade = behind ? 0 : Math.min(1, Math.max(0, range), Math.max(0, edge));
         item.el.style.opacity = fade.toFixed(2);
         item.el.style.transform = `translate(-50%, -100%) translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
       }
