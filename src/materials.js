@@ -173,13 +173,15 @@ export function createEarthMaterial({ tone = '#a8845f' } = {}) {
         `#include <color_fragment>
         {
           vec2 p = vMdPos.xz;
+          float vast = mdFbm(p * 0.0025 + 3.0);
           float broad = mdFbm(p * 0.06);
           float mid = mdFbm(p * 0.45 + 11.0);
           float fine = mdNoise(p * 9.0);
           float fw = length(fwidth(p * 9.0));
           fine = mix(fine, 0.5, smoothstep(0.4, 1.2, fw));
           vec3 c = diffuseColor.rgb;
-          c *= 0.86 + broad * 0.22;
+          c *= 0.84 + vast * 0.26;
+          c *= 0.9 + broad * 0.16;
           c = mix(c, c * vec3(0.92, 0.9, 0.86), smoothstep(0.55, 0.75, mid));
           c *= 0.95 + fine * 0.1;
           diffuseColor.rgb = c;

@@ -1,0 +1,15 @@
+{
+  "source": "Copernicus DEM GLO-30, tile N27 E068",
+  "grid": 257,
+  "sizeMeters": 8000.0,
+  "originLatLon": [
+    27.324556,
+    68.137211
+  ],
+  "baseElevation": 42.0,
+  "heightUnit": "cm above baseElevation, uint16, row-major, rows north to south",
+  "masks": "uint8 x3 per vertex after heights: citadel, lower town, water",
+  "waterLevel": 1.0,
+  "citadelTop": 5.3,
+  "lowerTownTop": 5.67
+}

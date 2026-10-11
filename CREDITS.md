@@ -13,6 +13,8 @@
 - Mackay, E. J. H. 1938. *Further Excavations at Mohenjo-daro*. 2 vols. Delhi: Manager of Publications, Government of India.
 
 ## Data
-- Elevation data will be added in Milestone 1 (Copernicus DEM GLO-30, with its required notices).
+- Elevation: Copernicus DEM GLO-30, tile N27 E068, processed with `tools/make-terrain.py` (smoothed, cropped to 8 × 8 km, mounds flattened into platforms, today's river used as a stand-in).
+  - Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
+  - The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.
 
 Every later source is listed here and next to the item it supports in the app.

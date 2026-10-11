@@ -16,7 +16,9 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <canvas id="scene" aria-label="A brick wall of Mohenjo-daro in evening light"></canvas>
+    <canvas id="scene" aria-label="The landscape of Mohenjo-daro on the Indus plain"></canvas>
+
+    <div id="labels" class="labels" aria-hidden="true"></div>
 
     <section id="opening" class="opening">
       <div class="opening-inner">
@@ -24,17 +26,17 @@
         <h1>Mohenjo-daro</h1>
         <p class="lede">A city of baked brick on the Indus, around 2500 BCE.</p>
         <div class="begin">
-          <button type="button" data-sound="on">Begin with sound</button>
-          <button type="button" data-sound="off" class="quiet">Begin in silence</button>
+          <button type="button" data-sound="on" disabled>Begin with sound</button>
+          <button type="button" data-sound="off" class="quiet" disabled>Begin in silence</button>
         </div>
+        <p id="loading" class="loading">Preparing the landscape…</p>
       </div>
     </section>
 
-    <footer id="status" class="status" hidden>
-      <span>Milestone 0</span>
-      <span class="dot">·</span>
-      <span id="server-status">checking server…</span>
-    </footer>
+    <button id="note-button" type="button" class="note-button" aria-expanded="false" aria-controls="note-panel" hidden>
+      How true is this?
+    </button>
+    <aside id="note-panel" class="note-panel" aria-label="How true is this?"></aside>
 
     <script type="module" src="/src/main.js"></script>
   </body>

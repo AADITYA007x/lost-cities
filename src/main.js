@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createBrickMaterial, createEarthMaterial } from './materials.js';
+import { loadTerrainData, buildTerrain, createWater, createHorizonGround } from './terrain.js';
+import { createSky } from './sky.js';
+import { createFlight, createCameraLimits } from './flight.js';
+import { createLabels, createNotePanel } from './ui.js';
+import { LANDSCAPE_NOTE, PLACE_LABELS } from './content/landscape.js';
+
+const params = new URLSearchParams(location.search);
+const skipIntro = params.has('skipintro');
 
 const isSmallScreen = Math.min(window.innerWidth, window.innerHeight) < 700;
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -8,155 +15,64 @@ const lowPower = isSmallScreen || isTouch;
 
 // ---------- renderer ----------
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowPower, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 
 const scene = new THREE.Scene();
-const haze = new THREE.Color('#d9b48c');
-scene.fog = new THREE.Fog(haze, 30, 140);
+const haze = new THREE.Color('#dcc0a0');
+scene.fog = new THREE.FogExp2(haze, 0.00016);
 
 const portrait = () => window.innerWidth < window.innerHeight;
-const camera = new THREE.PerspectiveCamera(portrait() ? 62 : 42, window.innerWidth / window.innerHeight, 0.1, 600);
-camera.position.set(19, 8.5, 21);
+const fovFor = () => (portrait() ? 60 : 40);
+const camera = new THREE.PerspectiveCamera(fovFor(), window.innerWidth / window.innerHeight, 1, 40000);
 
-// ---------- sky ----------
-const sky = new THREE.Mesh(
-  new THREE.SphereGeometry(400, 32, 16),
-  new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    fog: false,
-    uniforms: {
-      uTop: { value: new THREE.Color('#6f86a3') },
-      uMid: { value: new THREE.Color('#e7b98e') },
-      uLow: { value: haze },
-    },
-    vertexShader: `
-      varying vec3 vDir;
-      void main() {
-        vDir = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }`,
-    fragmentShader: `
-      uniform vec3 uTop;
-      uniform vec3 uMid;
-      uniform vec3 uLow;
-      varying vec3 vDir;
-      void main() {
-        float h = vDir.y;
-        vec3 c = mix(uLow, uMid, smoothstep(-0.02, 0.12, h));
-        c = mix(c, uTop, smoothstep(0.12, 0.7, h));
-        gl_FragColor = vec4(c, 1.0);
-        #include <colorspace_fragment>
-      }`,
-  })
-);
-scene.add(sky);
+// ---------- light: late afternoon sun from the west-south-west ----------
+const sunDirection = new THREE.Vector3(-0.86, 0.34, 0.38).normalize();
 
-// ---------- light ----------
-const hemi = new THREE.HemisphereLight('#f3d6b4', '#6b4a33', 0.9);
+const hemi = new THREE.HemisphereLight('#e9d6bd', '#5e4630', 0.75);
 scene.add(hemi);
 
-const sun = new THREE.DirectionalLight('#ffd2a0', 2.6);
-sun.position.set(-22, 13, 9);
+const sun = new THREE.DirectionalLight('#ffd3a0', 2.9);
 sun.castShadow = true;
-sun.shadow.mapSize.set(lowPower ? 1024 : 2048, lowPower ? 1024 : 2048);
-sun.shadow.camera.left = -22;
-sun.shadow.camera.right = 22;
-sun.shadow.camera.top = 22;
-sun.shadow.camera.bottom = -22;
-sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 80;
-sun.shadow.bias = -0.0004;
-sun.shadow.normalBias = 0.03;
-sun.shadow.radius = 4;
+const shadowSize = lowPower ? 1024 : 2048;
+sun.shadow.mapSize.set(shadowSize, shadowSize);
+Object.assign(sun.shadow.camera, { left: -1400, right: 1400, top: 1400, bottom: -1400, near: 100, far: 7000 });
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 1.5;
 scene.add(sun);
+scene.add(sun.target);
 
-// ---------- ground ----------
-const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(300, 64),
-  createEarthMaterial()
-);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-// ---------- a lane corner (placeholder, not yet a traced plan) ----------
-const brick = createBrickMaterial();
-const brickDark = createBrickMaterial({ tone: '#9a6440' });
-
-function block(w, h, d, x, y, z, material = brick) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  mesh.position.set(x, y + h / 2, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  scene.add(mesh);
-  return mesh;
-}
-
-const H = 3.6; // wall height (ground storey)
-const T = 0.9; // wall thickness
-
-// North house: blank wall along the lane, broken by a side lane at x = 2..3.6
-block(14, H, T, -5, 0, -2.2);
-block(8, H, T, 7.6, 0, -2.2);
-// Side lane walls running north
-block(T, H, 9, 1.55, 0, -7.1);
-block(T, H, 9, 4.05, 0, -7.1);
-
-// South house: long wall with a doorway into the courtyard house
-block(9, H, T, -7.5, 0, 2.2);
-block(13, H, T, 6.5, 0, 2.2);
-// doorway gap between x = -3 and x = 0, with a timber lintel (imagined: wood does not survive)
-const lintel = new THREE.Mesh(
-  new THREE.BoxGeometry(3.2, 0.22, T * 0.8),
-  new THREE.MeshStandardMaterial({ color: '#5c3d27', roughness: 0.85 })
-);
-lintel.position.set(-1.5, 2.35, 2.2);
-lintel.castShadow = true;
-scene.add(lintel);
-block(3.0, H - 2.46, T, -1.5, 2.46, 2.2);
-// courtyard walls behind the door
-block(T, H, 8, -12.45, 0, 6.2);
-block(T, H, 8, 12.55, 0, 6.2);
-
-// Covered drain along the lane: a low brick channel with a gap showing the water course
-block(26, 0.06, 0.55, 0, 0, 1.25, brickDark);
-
-// A low brick bench/platform at the foot of the wall (common outside houses)
-block(3.2, 0.45, 0.7, 6.2, 0, -1.4, brickDark);
+const sky = createSky({ sunDirection, haze });
+scene.add(sky);
 
 // ---------- controls ----------
 const controls = new OrbitControls(camera, canvas);
-controls.target.set(0, 1.2, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
-controls.minDistance = 8;
-controls.maxDistance = 70;
-controls.maxPolarAngle = Math.PI * 0.47;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.25;
+controls.screenSpacePanning = false;
+controls.minDistance = 60;
+controls.maxDistance = 3400;
+controls.maxPolarAngle = THREE.MathUtils.degToRad(80);
+controls.rotateSpeed = 0.5;
+controls.zoomSpeed = 0.8;
+controls.panSpeed = 0.8;
 controls.enabled = false;
 
-// ?view=eye starts at human eye height in the lane (for testing what a walker sees)
-if (new URLSearchParams(location.search).get('view') === 'eye') {
-  camera.position.set(10, 1.6, 0.2);
-  controls.target.set(-6, 1.6, -0.3);
-  controls.minDistance = 0.5;
-  controls.autoRotate = false;
-}
-controls.update();
+const flight = createFlight(camera, controls);
 
-// ---------- opening ----------
+// ---------- UI ----------
 const opening = document.getElementById('opening');
-const status = document.getElementById('status');
-const serverStatus = document.getElementById('server-status');
+const loading = document.getElementById('loading');
+const noteButton = document.getElementById('note-button');
+const notePanel = document.getElementById('note-panel');
+const labelLayer = document.getElementById('labels');
+createNotePanel(noteButton, notePanel, LANDSCAPE_NOTE);
 
 function savePreference(sound) {
   try {
@@ -166,46 +82,125 @@ function savePreference(sound) {
   }
 }
 
-opening.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-sound]');
-  if (!button) return;
-  savePreference(button.dataset.sound);
-  opening.classList.add('gone');
-  controls.enabled = true;
-  status.hidden = false;
-  checkServer();
-});
+// ---------- world ----------
+let world = null;
+let water = null;
+let labels = null;
+let limit = () => {};
+let home = null;
 
-async function checkServer() {
-  try {
-    const response = await fetch('/api/health', { cache: 'no-store' });
-    const data = await response.json();
-    if (data.ok) {
-      serverStatus.textContent = 'server: ok';
-      serverStatus.classList.add('ok');
-      return;
-    }
-    throw new Error('not ok');
-  } catch {
-    serverStatus.textContent = 'server: not running (fine with npm run dev)';
+async function init() {
+  const data = await loadTerrainData();
+  const terrain = buildTerrain(data);
+  scene.add(terrain.mesh);
+  water = createWater({ size: terrain.size, level: terrain.waterLevel, sunDirection, haze });
+  scene.add(water);
+  scene.add(createHorizonGround(terrain.edgeLevel));
+
+  const { citadel, lowerTown, river } = terrain.places;
+  const siteCenter = citadel.clone().lerp(lowerTown, 0.55);
+  siteCenter.y = terrain.heightAt(siteCenter.x, siteCenter.z);
+
+  sun.target.position.copy(siteCenter);
+  sun.position.copy(siteCenter).addScaledVector(sunDirection, 3500);
+
+  // Seen from the south: the citadel on the left, the lower town in the middle, the river to the right.
+  const homeTarget = siteCenter.clone().add(portrait() ? new THREE.Vector3(260, 0, 260) : new THREE.Vector3(480, 0, 380));
+  homeTarget.y = terrain.heightAt(homeTarget.x, homeTarget.z);
+  const homeOffset = new THREE.Vector3(-150, 950, 1950).multiplyScalar(portrait() ? 1.3 : 1);
+  home = { target: homeTarget, position: homeTarget.clone().add(homeOffset) };
+
+  labels = createLabels(labelLayer, [
+    { text: PLACE_LABELS.citadel, position: citadel, lift: 28 },
+    { text: PLACE_LABELS.lowerTown, position: lowerTown, lift: 24 },
+    { text: PLACE_LABELS.river, position: river, lift: 14 },
+  ]);
+
+  limit = createCameraLimits(camera, controls, terrain.heightAt);
+  world = { terrain, siteCenter };
+
+  if (skipIntro) {
+    camera.position.copy(home.position);
+    controls.target.copy(home.target);
+    begin('off', true);
+  } else {
+    // a slow, distant circle while the opening screen is up
+    controls.target.copy(siteCenter);
+    camera.position.copy(siteCenter).add(new THREE.Vector3(-1900, 1500, 2600));
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.18;
+    controls.update();
+    loading.hidden = true;
+    opening.querySelectorAll('button[data-sound]').forEach((b) => (b.disabled = false));
   }
 }
 
-// stop the slow orbit once the visitor takes the camera
-canvas.addEventListener('pointerdown', () => {
-  if (controls.enabled) controls.autoRotate = false;
+function begin(sound, instant = false) {
+  savePreference(sound);
+  opening.classList.add('gone');
+  controls.autoRotate = false;
+
+  const settle = () => {
+    controls.enabled = true;
+    noteButton.hidden = false;
+    labels.show(true);
+  };
+
+  if (instant) {
+    controls.update();
+    settle();
+  } else {
+    flight.to({ position: home.position, target: home.target, duration: 7 }, settle);
+  }
+}
+
+opening.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-sound]');
+  if (!button || button.disabled || !world) return;
+  begin(button.dataset.sound);
+});
+
+// double-click / double-tap: glide back to the home view
+let lastTap = 0;
+canvas.addEventListener('pointerup', (e) => {
+  if (!controls.enabled) return;
+  const now = performance.now();
+  if (now - lastTap < 320 && e.isPrimary) {
+    controls.enabled = false;
+    flight.to({ position: home.position, target: home.target, duration: 3 }, () => (controls.enabled = true));
+  }
+  lastTap = now;
+});
+
+init().catch((err) => {
+  console.error(err);
+  loading.textContent = 'The landscape could not load. Please refresh.';
 });
 
 // ---------- loop ----------
 function onResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
-  camera.fov = portrait() ? 62 : 42;
+  camera.fov = fovFor();
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 window.addEventListener('resize', onResize);
 
-renderer.setAnimationLoop(() => {
-  controls.update();
+const timer = new THREE.Timer();
+renderer.setAnimationLoop((now) => {
+  timer.update(now);
+  const dt = Math.min(timer.getDelta(), 0.1);
+  const t = timer.getElapsed();
+
+  if (flight.flying) {
+    flight.update(dt);
+  } else {
+    controls.update();
+    if (world) limit();
+  }
+
+  sky.position.copy(camera.position);
+  if (water) water.material.uniforms.uTime.value = t;
+  labels?.update(camera);
   renderer.render(scene, camera);
 });
