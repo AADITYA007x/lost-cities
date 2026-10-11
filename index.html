@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Mohenjo-daro · Lost Cities</title>
+    <meta name="description" content="Walk a city of baked brick, c. 2500 BCE. An interactive reconstruction of Mohenjo-daro that shows how sure we are about every wall." />
+    <meta name="theme-color" content="#14100d" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene" aria-label="A brick wall of Mohenjo-daro in evening light"></canvas>
+
+    <section id="opening" class="opening">
+      <div class="opening-inner">
+        <p class="eyebrow">Lost Cities</p>
+        <h1>Mohenjo-daro</h1>
+        <p class="lede">A city of baked brick on the Indus, around 2500 BCE.</p>
+        <div class="begin">
+          <button type="button" data-sound="on">Begin with sound</button>
+          <button type="button" data-sound="off" class="quiet">Begin in silence</button>
+        </div>
+      </div>
+    </section>
+
+    <footer id="status" class="status" hidden>
+      <span>Milestone 0</span>
+      <span class="dot">·</span>
+      <span id="server-status">checking server…</span>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
