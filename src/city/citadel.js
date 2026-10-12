@@ -1,18 +1,20 @@
 import { CERTAINTY } from './batch.js';
 import { buildHouse } from './houses.js';
-import { subdivide, overlaps } from './layout.js';
+import { subdivide, overlaps, pointInPolygon, fromSitePlan } from './layout.js';
 
 const E = CERTAINTY.excavated;
 const I = CERTAINTY.inferred;
 const M = CERTAINTY.imagined;
 
-// Public buildings on the citadel mound. Sizes follow published descriptions;
-// their exact placement is approximate until the plans are traced.
+// Public buildings on the citadel mound. Sizes follow published descriptions.
+// The Great Bath is placed where Mackay's site plan (Plate I) marks it; the others are
+// placed relative to it, approximately, until the SD plans are traced.
 export function planCitadel(rect) {
-  const cx = (rect.x0 + rect.x1) / 2;
-
   // Great Bath complex, about 55 m north-south by 33 m east-west.
-  const bath = { x0: cx - 16.5, x1: cx + 16.5, z0: rect.z0 + 122, z1: rect.z0 + 177 };
+  const [bx, bz] = fromSitePlan(290, 463);
+  const hallWest = rect.x0 + 10;
+  const bcx = Math.max(bx, hallWest + 46 + 8 + 16.5);
+  const bath = { x0: bcx - 16.5, x1: bcx + 16.5, z0: bz - 27.5, z1: bz + 27.5 };
   // Court around the pool, and the pool itself: about 12 m x 7 m, 2.4 m deep.
   const court = { x0: bath.x0 + 4.9, x1: bath.x0 + 23.9, z0: bath.z0 + 13.5, z1: bath.z1 - 13.5 };
   const pcx = (court.x0 + court.x1) / 2;
@@ -20,13 +22,14 @@ export function planCitadel(rect) {
   const pool = { x0: pcx - 3.5, x1: pcx + 3.5, z0: pcz - 6, z1: pcz + 6, depth: 2.4 };
 
   // The "granary" or "Great Hall": a brick podium about 46 x 23 m crossed by narrow passages.
-  const hall = { x0: rect.x0 + 12, x1: rect.x0 + 58, z0: bath.z0 + 22, z1: bath.z0 + 45 };
+  const hall = { x0: hallWest, x1: hallWest + 46, z0: bath.z0 + 22, z1: bath.z0 + 45 };
 
   // The so-called "College of Priests" across the lane, north-east of the bath.
   const college = { x0: bath.x1 - 6, x1: Math.min(rect.x1 - 6, bath.x1 + 64), z0: bath.z0 - 30, z1: bath.z0 - 6 };
 
-  // Pillared hall in the south of the mound.
-  const pillared = { x0: rect.x0 + 60, x1: rect.x0 + 87, z0: rect.z0 + 330, z1: rect.z0 + 357 };
+  // Pillared hall in the L area, the southern part of the mound.
+  const [px, pz] = fromSitePlan(300, 590);
+  const pillared = { x0: px - 13.5, x1: px + 13.5, z0: pz - 13.5, z1: pz + 13.5 };
 
   return { bath, court, pool, hall, college, pillared };
 }
@@ -148,7 +151,10 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
   const reserved = [bath, hall, college, pillared, ...covered];
   const block = { x0: rect.x0 + 6, x1: rect.x1 - 6, z0: rect.z0 + 6, z1: rect.z1 - 6, open: { n: true, s: true, e: true, w: true } };
   const lots = subdivide(block, rng, { minLot: 12, maxLot: 30, laneChance: 0.7, laneWidth: [3, 5] });
+  const inside = (l) =>
+    [[l.x0, l.z0], [l.x1, l.z0], [l.x1, l.z1], [l.x0, l.z1]].every(([x, z]) => pointInPolygon(x, z, rect.outline));
   for (const lot of lots) {
+    if (!inside(lot)) continue;
     if (reserved.some((r) => overlaps(lot, r, 5))) continue;
     if (rng.chance(0.45)) continue; // open courts and yards
     buildHouse(lot, y, rng, out, { known: false, detail });

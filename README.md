@@ -19,6 +19,8 @@ An interactive 3D reconstruction of Mohenjo-daro around 2500 BCE that shows how 
 
 The tracer is never built or deployed.
 
+Known plates have presets (`tools/tracer/presets.js`): open the plate image and its scale, north and position are filled in. `tools/autotrace.py` makes a first pass of solid black walls from a plate; open its JSON in the tracer to review and correct it.
+
 ## Deploy
 Push to `main`. Cloudflare Workers Builds runs `npm run build` and `npx wrangler deploy`.
 

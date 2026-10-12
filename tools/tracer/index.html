@@ -15,6 +15,11 @@
       <section>
         <h2>1 · Plan</h2>
         <label class="file">Open plan image<input id="image-input" type="file" accept="image/*" /></label>
+        <label>Plate preset
+          <select id="preset">
+            <option value="">None (calibrate by hand)</option>
+          </select>
+        </label>
         <div class="row">
           <label>Source
             <select id="source">
@@ -28,9 +33,11 @@
         <div class="row">
           <label>Area
             <select id="area">
-              <option>HR</option>
+              <option>DK-G</option>
+              <option>DK-B/C</option>
+              <option>DK-A</option>
               <option>VS</option>
-              <option>DK</option>
+              <option>HR</option>
               <option>SD</option>
               <option>L</option>
               <option>Other</option>

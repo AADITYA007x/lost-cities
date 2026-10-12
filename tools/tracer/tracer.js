@@ -2,7 +2,8 @@
 // Runs only with `npm run dev` (http://localhost:5173/tools/tracer/). Nothing here is deployed.
 
 import { makeTransform, isCalibrated, FEET } from '../../src/city/trace-transform.js';
-import { PLATFORMS, EXCAVATED_AREAS, rectOf } from '../../src/city/layout.js';
+import { EXCAVATED_AREAS } from '../../src/city/layout.js';
+import { PLATE_PRESETS } from './presets.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('canvas');
@@ -35,15 +36,8 @@ const state = {
 
 // ---------- defaults for where each area sits in the scene (refined later) ----------
 function defaultAnchor(area) {
-  const lower = rectOf(PLATFORMS.lowerTown);
-  const a = EXCAVATED_AREAS.find((e) => e.id === area);
-  if (a) {
-    const u = (a.u0 + a.u1) / 2;
-    const v = (a.v0 + a.v1) / 2;
-    return [Math.round(lower.x0 + u * (lower.x1 - lower.x0)), Math.round(lower.z0 + v * (lower.z1 - lower.z0))];
-  }
-  if (area === 'SD' || area === 'L') return [PLATFORMS.citadel.cx, PLATFORMS.citadel.cz];
-  return [0, 0];
+  const a = EXCAVATED_AREAS.find((e) => e.id === area || e.id.startsWith(area));
+  return a ? [Math.round((a.x0 + a.x1) / 2), Math.round((a.z0 + a.z1) / 2)] : [0, 0];
 }
 
 // ---------- view ----------
@@ -171,6 +165,9 @@ function draw() {
     ctx.lineTo(ax, ay + 10 * px);
     ctx.stroke();
   }
+  if (state.clicks.length === 1 && state.cursorPoint) {
+    strokeLine([state.clicks[0], state.cursorPoint], state.mode === 'north' ? 'rgba(255, 120, 120, 0.9)' : 'rgba(120, 200, 255, 0.9)', 2 * px);
+  }
   for (const p of state.clicks) {
     ctx.fillStyle = COLORS.draft;
     ctx.beginPath();
@@ -181,23 +178,46 @@ function draw() {
 
 // ---------- status ----------
 const HINTS = {
-  none: 'Step 1: open a plan image.',
-  scale: 'Scale: click both ends of the scale bar.',
-  north: 'North: click the tail, then the head of the north arrow.',
-  anchor: 'Anchor: click a point you can place in the scene (e.g. a street corner).',
-  wall: 'Wall: click along the middle of a wall. Enter or double-click to finish. Shift keeps it straight.',
-  drain: 'Drain: click along a drain. Enter to finish.',
-  well: 'Well: click the centre of a well.',
+  none: 'Step 1 of 4 \u00b7 Open a plan image (or pick a plate preset).',
+  scale: 'Step 2 of 4 \u00b7 Scale: click the left end of the scale bar, then its right end.',
+  north: 'Step 3 of 4 \u00b7 North: click the tail of the north arrow, then its tip.',
+  anchor: 'Step 4 of 4 \u00b7 Anchor: type the scene x and z on the left, then click that point on the plan.',
+  wall: 'Wall: click along the middle of a wall, corner by corner. Enter finishes the line.',
+  drain: 'Drain: click along a drain. Enter finishes the line.',
+  well: 'Well: click the centre of each well.',
   select: 'Select: click a line or well. Delete removes it.',
 };
+
+function hintText() {
+  if (state.clicks.length === 1 && state.mode === 'scale') return 'Scale: now click the other end of the scale bar.';
+  if (state.clicks.length === 1 && state.mode === 'north') return 'North: now click the tip of the arrow.';
+  if (state.draft.length) {
+    const n = state.draft.length;
+    return `${state.mode === 'wall' ? 'Wall' : 'Drain'}: ${n} point${n > 1 ? 's' : ''} \u00b7 Enter to finish \u00b7 Backspace removes a point \u00b7 Esc cancels`;
+  }
+  return HINTS[state.mode];
+}
+
+function refreshHint() {
+  $('mode-hint').textContent = hintText();
+}
 
 function setMode(mode) {
   if (state.draft.length) finishDraft();
   state.mode = mode;
   state.clicks = [];
   document.querySelectorAll('button[data-mode]').forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
-  $('mode-hint').textContent = HINTS[mode];
+  refreshHint();
   draw();
+}
+
+// after each calibration step, move on to the next one that is missing
+function nextStep() {
+  const c = state.calibration;
+  if (!c.mPerPx) setMode('scale');
+  else if (!c.north) setMode('north');
+  else if (!c.anchor || !c.anchor.px) setMode('anchor');
+  else setMode('wall');
 }
 
 function updateStatus() {
@@ -232,6 +252,7 @@ function finishDraft() {
   state.draft = [];
   state.hoverPoint = null;
   updateStatus();
+  refreshHint();
   draw();
 }
 
@@ -279,6 +300,7 @@ function onClick(e) {
       }
       state.clicks = [];
       updateStatus();
+      if (c.mPerPx) nextStep();
     }
   } else if (state.mode === 'north') {
     state.clicks.push(p);
@@ -286,12 +308,14 @@ function onClick(e) {
       c.north = [state.clicks[0], state.clicks[1]];
       state.clicks = [];
       updateStatus();
+      nextStep();
     }
   } else if (state.mode === 'anchor') {
     const x = parseFloat($('anchor-x').value);
     const z = parseFloat($('anchor-z').value);
     c.anchor = { px: p, scene: [Number.isFinite(x) ? x : 0, Number.isFinite(z) ? z : 0] };
     updateStatus();
+    nextStep();
   } else if (state.mode === 'wall' || state.mode === 'drain') {
     if (e.shiftKey && state.draft.length) p = snap(state.draft[state.draft.length - 1], p);
     state.draft.push(p);
@@ -301,6 +325,7 @@ function onClick(e) {
   } else if (state.mode === 'select') {
     state.selected = pick(p);
   }
+  refreshHint();
   draw();
 }
 
@@ -326,6 +351,7 @@ canvas.addEventListener('pointermove', (e) => {
   let p = toImage(e.clientX, e.clientY);
   if (e.shiftKey && state.draft.length) p = snap(state.draft[state.draft.length - 1], p);
   state.hoverPoint = state.draft.length ? p : null;
+  state.cursorPoint = p;
   state.hover = state.mode === 'select' ? pick(p) : null;
   const c = state.calibration;
   let text = `px ${p[0].toFixed(0)}, ${p[1].toFixed(0)}`;
@@ -477,14 +503,24 @@ function loadImage(src, name) {
     state.imageName = name;
     $('empty').classList.add('hidden');
     fitImage();
+    let restored = false;
     try {
       const saved = localStorage.getItem(storageKey());
-      if (saved) fromJSON(JSON.parse(saved));
+      if (saved) {
+        fromJSON(JSON.parse(saved));
+        restored = true;
+      }
     } catch {
       /* nothing saved */
     }
-    setMode(isCalibrated(state.calibration) ? 'wall' : 'scale');
+    const preset = presetForFile(name);
+    if (preset && !isCalibrated(state.calibration)) {
+      presetSelect.value = preset;
+      applyPreset(preset);
+    }
+    if (restored) $('mode-hint').textContent = 'Your earlier work on this plan was restored.';
     updateStatus();
+    nextStep();
   };
   img.onerror = () => alert('That file could not be opened as an image. Please use PNG or JPG.');
   img.src = src;
@@ -538,10 +574,38 @@ for (const id of ['anchor-x', 'anchor-z']) {
 
 document.querySelectorAll('button[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
 
+// ---------- plate presets: calibration already worked out for known plates ----------
+const presetSelect = $('preset');
+for (const [key, p] of Object.entries(PLATE_PRESETS)) {
+  const o = document.createElement('option');
+  o.value = key;
+  o.textContent = p.label;
+  presetSelect.appendChild(o);
+}
+function applyPreset(key) {
+  const p = PLATE_PRESETS[key];
+  if (!p) return;
+  $('source').value = p.source;
+  $('plate').value = p.plate;
+  $('page').value = p.page;
+  $('area').value = p.area;
+  state.calibration = JSON.parse(JSON.stringify(p.calibration));
+  $('anchor-x').value = p.calibration.anchor.scene[0];
+  $('anchor-z').value = p.calibration.anchor.scene[1];
+  updateStatus();
+  if (state.image) nextStep();
+  draw();
+}
+presetSelect.addEventListener('change', () => applyPreset(presetSelect.value));
+// opening a known plate image picks its preset automatically
+function presetForFile(name) {
+  return Object.keys(PLATE_PRESETS).find((k) => PLATE_PRESETS[k].file === name);
+}
+
 // test hook: lets automated checks drive the tracer without a file dialog
 window.__tracer = { state, fromJSON, toJSON, setMode, draw, fitImage };
 
-const [ax, az] = defaultAnchor('HR');
+const [ax, az] = defaultAnchor('DK-G');
 $('anchor-x').value = ax;
 $('anchor-z').value = az;
 window.addEventListener('resize', resize);

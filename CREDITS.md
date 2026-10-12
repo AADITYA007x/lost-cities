@@ -11,6 +11,9 @@
 ## Archaeological sources (cited, not reproduced)
 - Marshall, J. (ed.) 1931. *Mohenjo-daro and the Indus Civilization*. 3 vols. London: Arthur Probsthain.
 - Mackay, E. J. H. 1938. *Further Excavations at Mohenjo-daro*. 2 vols. Delhi: Manager of Publications, Government of India.
+  - Plate I (site plan): mound outlines, excavated areas and First Street, traced as coordinates.
+  - Plate XVIII (DK area, G section, plan of the Intermediate I period): walls traced as coordinates, first with `tools/autotrace.py`, then reviewed in the plan tracer.
+  - Scans: Archaeological Survey of India / Central Archaeological Library copy, via the Digital Library of India on Archive.org. The scans themselves are not included in this project.
 
 ## Data
 - Elevation: Copernicus DEM GLO-30, tile N27 E068, processed with `tools/make-terrain.py` (smoothed, cropped to 8 × 8 km, mounds flattened into platforms, today's river used as a stand-in).

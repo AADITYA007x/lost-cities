@@ -110,9 +110,9 @@ async function init() {
   sun.position.copy(siteCenter).addScaledVector(sunDirection, 3500);
 
   // Seen from the south: the citadel on the left, the lower town in the middle, the river to the right.
-  const homeTarget = siteCenter.clone().add(portrait() ? new THREE.Vector3(-20, 0, 60) : new THREE.Vector3(120, 0, 120));
+  const homeTarget = siteCenter.clone().add(portrait() ? new THREE.Vector3(60, 0, 40) : new THREE.Vector3(120, 0, 120));
   homeTarget.y = groundAt(homeTarget.x, homeTarget.z);
-  const homeOffset = new THREE.Vector3(-80, 640, 1250).multiplyScalar(portrait() ? 1.2 : 1);
+  const homeOffset = new THREE.Vector3(-80, 640, 1250).multiplyScalar(portrait() ? 1.7 : 1);
   home = { target: homeTarget, position: homeTarget.clone().add(homeOffset) };
 
   labels = createLabels(labelLayer, [
@@ -122,6 +122,7 @@ async function init() {
     { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900 },
     { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500 },
     { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500 },
+    ...(f.traced ? [{ text: PLACE_LABELS.traced, position: f.traced, lift: 10, near: 0, far: 1100 }] : []),
   ]);
 
   limit = createCameraLimits(camera, controls, groundAt, { clearance: 8 });

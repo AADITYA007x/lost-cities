@@ -1,5 +1,10 @@
 // The overall plan of the city: platforms, main streets and house plots.
-// Coordinates are metres in the scene: x east, z south, origin between the two mounds.
+// Coordinates are metres in the scene: x east, z south.
+//
+// Positions come from Mackay 1938, Plate I (site plan of Mohenjo-daro), lined up with
+// the Copernicus elevation data: the stupa on the citadel mound is the anchor, and the
+// plan's scale bar gives 1.408 m per scan pixel. The mounds on the plan match the
+// elevation data to within about 15 m.
 
 export function createRng(seed = 2500) {
   let a = seed >>> 0;
@@ -18,59 +23,139 @@ export function createRng(seed = 2500) {
   };
 }
 
-// Platform rectangles. Centres come from the elevation data (the two mounds);
-// sizes are rounded approximations of the published site plans.
-export const PLATFORMS = {
-  citadel: { cx: -431, cz: -143, w: 210, d: 420, height: 10 },
-  lowerTown: { cx: 139, cz: 31, w: 620, d: 820, height: 6 },
-};
-
-export function rectOf(p) {
-  return { x0: p.cx - p.w / 2, x1: p.cx + p.w / 2, z0: p.cz - p.d / 2, z1: p.cz + p.d / 2, y: p.height };
+// Mackay 1938 Plate I pixel -> scene metres
+export const SITE_PLAN = { source: 'Mackay 1938, Plate I', mPerPx: 1.408, anchorPx: [340, 462], anchorScene: [-383, -110] };
+export function fromSitePlan(px, py) {
+  const { mPerPx, anchorPx, anchorScene } = SITE_PLAN;
+  return [anchorScene[0] + (px - anchorPx[0]) * mPerPx, anchorScene[1] + (py - anchorPx[1]) * mPerPx];
 }
 
-// Main streets of the lower town, as fractions of the platform (u: west to east, v: north to south).
-// First Street (north-south) and East Street (east-west) are names used by the excavators;
-// their positions here are approximate until the plans are traced.
-export const LOWER_TOWN_STREETS = [
-  { id: 'first-street', name: 'First Street', axis: 'ns', at: 0.42, width: 9 },
-  { id: 'ns-east', name: null, axis: 'ns', at: 0.78, width: 6.5 },
-  { id: 'ns-west', name: null, axis: 'ns', at: 0.12, width: 5 },
-  { id: 'east-street', name: 'East Street', axis: 'ew', at: 0.38, width: 8 },
-  { id: 'ew-south', name: null, axis: 'ew', at: 0.72, width: 6 },
+// Platform outlines follow the outer contours of the mounds on the site plan (simplified).
+export const PLATFORMS = {
+  citadel: {
+    height: 10,
+    outline: [
+      [-492.8, -236.7], [-397.1, -246.6], [-319.6, -218.4], [-305.6, -126.9], [-312.6, -28.3], [-340.8, 6.9],
+      [-371.7, 28.0], [-376.0, 98.4], [-408.3, 140.6], [-474.5, 147.7], [-509.7, 112.5], [-516.8, 28.0],
+      [-502.7, -28.3], [-509.7, -126.9], [-506.9, -197.3],
+    ],
+  },
+  lowerTown: {
+    height: 6,
+    outline: [
+      [-94.4, -422.6], [-16.9, -471.9], [67.6, -481.7], [152.0, -447.9], [250.6, -397.2], [321.0, -338.1],
+      [363.2, -225.5], [384.4, -84.7], [391.4, 56.1], [377.3, 168.8], [405.5, 239.2], [377.3, 312.4],
+      [264.7, 340.6], [123.9, 354.6], [11.2, 380.0], [-101.4, 387.0], [-185.9, 365.9], [-207.0, 281.4],
+      [-171.8, 196.9], [-157.7, 112.5], [-157.7, 28.0], [-129.6, -56.5], [-143.6, -141.0], [-157.7, -197.3],
+      [-150.7, -295.9], [-129.6, -366.3],
+    ],
+  },
+};
+
+// Areas dug by the excavators (red on the site plan), as scene rectangles.
+// Generated houses inside them are marked "inferred" (houses were found here, our layout is generated);
+// houses elsewhere are "imagined". Traced plans replace generated houses entirely.
+export const EXCAVATED_AREAS = [
+  { id: 'DK-G', x0: -136.6, x1: 46.4, z0: -401.5, z1: -197.3 },
+  { id: 'DK-B/C', x0: 173.2, x1: 363.2, z0: -190.3, z1: -105.8 },
+  { id: 'DK-A', x0: 304.1, x1: 352.0, z0: -49.5, z1: 2.6 },
+  { id: 'VS', x0: -129.6, x1: 39.4, z0: 20.9, z1: 154.7 },
+  { id: 'HR', x0: -171.8, x1: 4.2, z0: 211.0, z1: 351.8 },
+  { id: 'SD', x0: -502.7, x1: -312.6, z0: -232.5, z1: -28.3 },
+  { id: 'L', x0: -509.7, x1: -376.0, z0: 6.9, z1: 140.6 },
 ];
 
-// Areas named by the excavators, roughly placed (u, v fractions of the lower town).
-// Houses inside them are marked "inferred" (houses were excavated here, our layout is generated);
-// elsewhere "imagined".
-export const EXCAVATED_AREAS = [
-  { id: 'HR', u0: 0.13, u1: 0.42, v0: 0.22, v1: 0.6 },
-  { id: 'VS', u0: 0.12, u1: 0.42, v0: 0.6, v1: 0.85 },
-  { id: 'DK', u0: 0.55, u1: 0.96, v0: 0.38, v1: 0.88 },
+// First Street: one straight street that runs through DK-G, VS and HR on the site plan.
+// Its width (about 7 m) is measured on Mackay Plate XVIII.
+export const FIRST_STREET = { north: [46.4, -401.5], south: [-45.1, 351.8], width: 7 };
+
+// The lower town's houses are generated in a frame aligned with First Street
+// (about 7 degrees off north), so streets and houses follow the city's own grid.
+const fdx = FIRST_STREET.south[0] - FIRST_STREET.north[0];
+const fdz = FIRST_STREET.south[1] - FIRST_STREET.north[1];
+const flen = Math.hypot(fdx, fdz);
+export const GRID = {
+  origin: FIRST_STREET.north,
+  // unit vectors in the scene: v runs south along First Street, u runs east across it
+  v: [fdx / flen, fdz / flen],
+  u: [fdz / flen, -fdx / flen],
+  angle: Math.atan2(fdx, fdz), // rotation about y that maps local axes to the scene
+};
+export function gridToScene(u, v) {
+  return [GRID.origin[0] + u * GRID.u[0] + v * GRID.v[0], GRID.origin[1] + u * GRID.u[1] + v * GRID.v[1]];
+}
+export function sceneToGrid(x, z) {
+  const dx = x - GRID.origin[0];
+  const dz = z - GRID.origin[1];
+  return [dx * GRID.u[0] + dz * GRID.u[1], dx * GRID.v[0] + dz * GRID.v[1]];
+}
+
+// Streets in grid coordinates (u across, v along). Only First Street is known end to end;
+// the others continue the pattern and are imagined.
+export const LOWER_TOWN_STREETS = [
+  { id: 'first-street', name: 'First Street', axis: 'ns', at: 0, width: FIRST_STREET.width, known: true },
+  { id: 'ns-west', name: null, axis: 'ns', at: -125, width: 5 },
+  { id: 'ns-east', name: null, axis: 'ns', at: 215, width: 6 },
+  { id: 'ns-far-east', name: null, axis: 'ns', at: 360, width: 5 },
+  { id: 'ew-1', name: null, axis: 'ew', at: 215, width: 6 },
+  { id: 'ew-2', name: null, axis: 'ew', at: 470, width: 6 },
+  { id: 'ew-3', name: null, axis: 'ew', at: 640, width: 5 },
 ];
+
+export function pointInPolygon(x, z, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, zi] = poly[i];
+    const [xj, zj] = poly[j];
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+export function boundsOf(poly) {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let z0 = Infinity;
+  let z1 = -Infinity;
+  for (const [x, z] of poly) {
+    x0 = Math.min(x0, x);
+    x1 = Math.max(x1, x);
+    z0 = Math.min(z0, z);
+    z1 = Math.max(z1, z);
+  }
+  return { x0, x1, z0, z1 };
+}
+
+export function centroidOf(poly) {
+  let x = 0;
+  let z = 0;
+  for (const p of poly) {
+    x += p[0];
+    z += p[1];
+  }
+  return [x / poly.length, z / poly.length];
+}
 
 // Split a rectangle into blocks between streets.
-export function blocksBetweenStreets(rect, streets, margin = 5) {
-  const w = rect.x1 - rect.x0;
-  const d = rect.z1 - rect.z0;
+export function blocksBetweenStreets(rect, streets, margin = 0) {
   const cutsX = [[rect.x0 + margin, 0]];
   const cutsZ = [[rect.z0 + margin, 0]];
   for (const s of streets) {
-    if (s.axis === 'ns') cutsX.push([rect.x0 + s.at * w, s.width]);
-    else cutsZ.push([rect.z0 + s.at * d, s.width]);
+    if (s.axis === 'ns') cutsX.push([s.at, s.width]);
+    else cutsZ.push([s.at, s.width]);
   }
   cutsX.push([rect.x1 - margin, 0]);
   cutsZ.push([rect.z1 - margin, 0]);
-  cutsX.sort((a, b) => a[0] - b[0]);
-  cutsZ.sort((a, b) => a[0] - b[0]);
+  const keepX = cutsX.filter(([p]) => p >= rect.x0 && p <= rect.x1).sort((a, b) => a[0] - b[0]);
+  const keepZ = cutsZ.filter(([p]) => p >= rect.z0 && p <= rect.z1).sort((a, b) => a[0] - b[0]);
 
   const blocks = [];
-  for (let i = 0; i < cutsX.length - 1; i++) {
-    for (let j = 0; j < cutsZ.length - 1; j++) {
-      const x0 = cutsX[i][0] + cutsX[i][1] / 2;
-      const x1 = cutsX[i + 1][0] - cutsX[i + 1][1] / 2;
-      const z0 = cutsZ[j][0] + cutsZ[j][1] / 2;
-      const z1 = cutsZ[j + 1][0] - cutsZ[j + 1][1] / 2;
+  for (let i = 0; i < keepX.length - 1; i++) {
+    for (let j = 0; j < keepZ.length - 1; j++) {
+      const x0 = keepX[i][0] + keepX[i][1] / 2;
+      const x1 = keepX[i + 1][0] - keepX[i + 1][1] / 2;
+      const z0 = keepZ[j][0] + keepZ[j][1] / 2;
+      const z1 = keepZ[j + 1][0] - keepZ[j + 1][1] / 2;
       if (x1 - x0 > 8 && z1 - z0 > 8) {
         blocks.push({ x0, x1, z0, z1, open: { n: true, s: true, w: true, e: true } });
       }
