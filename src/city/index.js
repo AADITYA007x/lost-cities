@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Batch, CERTAINTY } from './batch.js';
 import { buildHouse } from './houses.js';
 import { buildCitadel, planCitadel } from './citadel.js';
+import { loadTraces, buildTraced } from './traced.js';
 import {
   createRng,
   PLATFORMS,
@@ -10,6 +11,7 @@ import {
   EXCAVATED_AREAS,
   blocksBetweenStreets,
   subdivide,
+  overlaps,
 } from './layout.js';
 import { createBrickMaterial, createEarthMaterial } from '../materials.js';
 
@@ -80,6 +82,18 @@ export function buildCity({ lowPower = false } = {}) {
   const citadelRect = rectOf(PLATFORMS.citadel);
   const lowerRect = rectOf(PLATFORMS.lowerTown);
 
+  const inRect = (r, x, z, m = 0) => x >= r.x0 - m && x <= r.x1 + m && z >= r.z0 - m && z <= r.z1 + m;
+  function platformHeightAt(x, z) {
+    if (inRect(citadelRect, x, z)) return citadelRect.y;
+    if (inRect(lowerRect, x, z)) return lowerRect.y;
+    return -Infinity;
+  }
+
+  // ---------- traced plans (excavated walls) come first ----------
+  const traces = loadTraces();
+  const covered = buildTraced(traces, (x, z) => Math.max(0, platformHeightAt(x, z)), out);
+  const isCovered = (lot) => covered.some((c) => overlaps(lot, c, 1));
+
   // ---------- lower town ----------
   const lw = lowerRect.x1 - lowerRect.x0;
   const ld = lowerRect.z1 - lowerRect.z0;
@@ -94,6 +108,7 @@ export function buildCity({ lowPower = false } = {}) {
   for (const block of blocks) {
     for (const lot of subdivide(block, rng)) {
       if (rng.chance(0.04)) continue; // a few open yards
+      if (isCovered(lot)) continue; // traced houses stand here instead
       buildHouse(lot, lowerRect.y, rng, out, { known: isKnown(lot), detail });
       houseCount++;
     }
@@ -126,7 +141,7 @@ export function buildCity({ lowPower = false } = {}) {
 
   // ---------- citadel ----------
   const plan = planCitadel(citadelRect);
-  buildCitadel(citadelRect, plan, rng, out, { detail });
+  buildCitadel(citadelRect, plan, rng, out, { detail, covered });
   // a ramp from the citadel down toward the lower town (imagined)
   const rz = (citadelRect.z0 + citadelRect.z1) / 2 + 40;
   out.ramps.ramp(citadelRect.x1, rz - 3.5, citadelRect.x1 + 70, rz + 3.5, -0.5, citadelRect.y, 'w', CERTAINTY.imagined);
@@ -166,13 +181,6 @@ export function buildCity({ lowPower = false } = {}) {
   poolWater.position.set((plan.pool.x0 + plan.pool.x1) / 2, citadelRect.y + 0.3 - 0.7, (plan.pool.z0 + plan.pool.z1) / 2);
   group.add(poolWater);
 
-  // ---------- ground height including the platforms ----------
-  const inRect = (r, x, z, m = 0) => x >= r.x0 - m && x <= r.x1 + m && z >= r.z0 - m && z <= r.z1 + m;
-  function platformHeightAt(x, z) {
-    if (inRect(citadelRect, x, z)) return citadelRect.y;
-    if (inRect(lowerRect, x, z)) return lowerRect.y;
-    return -Infinity;
-  }
 
   const firstStreet = LOWER_TOWN_STREETS[0];
   const eastStreet = LOWER_TOWN_STREETS[3];
@@ -183,10 +191,15 @@ export function buildCity({ lowPower = false } = {}) {
     eastStreet: new THREE.Vector3(lowerRect.x0 + lw * 0.88, lowerRect.y + 2, lowerRect.z0 + eastStreet.at * ld),
     citadel: new THREE.Vector3(PLATFORMS.citadel.cx, citadelRect.y, PLATFORMS.citadel.cz),
     lowerTown: new THREE.Vector3(PLATFORMS.lowerTown.cx, lowerRect.y, PLATFORMS.lowerTown.cz),
+    traced: covered.length
+      ? new THREE.Vector3((covered[0].x0 + covered[0].x1) / 2, Math.max(0, platformHeightAt((covered[0].x0 + covered[0].x1) / 2, (covered[0].z0 + covered[0].z1) / 2)), (covered[0].z0 + covered[0].z1) / 2)
+      : null,
   };
 
   const stats = {
     houses: houseCount,
+    tracedPlates: traces.length,
+    tracedAreas: covered.map((c) => c.area),
     vertices: out.walls.vertexCount + out.roofs.vertexCount + out.paving.vertexCount,
   };
 

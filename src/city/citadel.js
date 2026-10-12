@@ -31,7 +31,7 @@ export function planCitadel(rect) {
   return { bath, court, pool, hall, college, pillared };
 }
 
-export function buildCitadel(rect, plan, rng, out, { detail }) {
+export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
   const { walls, roofs, paving, wells } = out;
   const y = rect.y;
   const { bath, court, pool, hall, college, pillared } = plan;
@@ -145,7 +145,7 @@ export function buildCitadel(rect, plan, rng, out, { detail }) {
   roofs.box(pillared.x0 - 0.3, y + WH, pillared.z0 - 0.3, pillared.x1 + 0.3, y + WH + 0.35, pillared.z1 + 0.3, M);
 
   // ---------- other buildings on the mound (positions imagined) ----------
-  const reserved = [bath, hall, college, pillared];
+  const reserved = [bath, hall, college, pillared, ...covered];
   const block = { x0: rect.x0 + 6, x1: rect.x1 - 6, z0: rect.z0 + 6, z1: rect.z1 - 6, open: { n: true, s: true, e: true, w: true } };
   const lots = subdivide(block, rng, { minLot: 12, maxLot: 30, laneChance: 0.7, laneWidth: [3, 5] });
   for (const lot of lots) {

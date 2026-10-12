@@ -11,6 +11,14 @@ An interactive 3D reconstruction of Mohenjo-daro around 2500 BCE that shows how 
 ## Terrain
 `public/terrain/mohenjo-daro.bin` is made from the Copernicus DEM tile by `tools/make-terrain.py` (Python, only needed if the terrain is ever rebuilt). Keep the raw tile in `data-raw/` (git-ignored).
 
+## Tracing excavation plans
+1. Keep plan scans in `data-raw/` (git-ignored; never commit them).
+2. `npm run dev`, then open http://localhost:5173/tools/tracer/
+3. Open a plan image, set the scale bar, the north arrow and an anchor point, then trace walls, drains and wells.
+4. Download the JSON into `src/data/traced/`. The city loads every file there: traced walls are shown as excavated, and generated houses are left out where a trace covers.
+
+The tracer is never built or deployed.
+
 ## Deploy
 Push to `main`. Cloudflare Workers Builds runs `npm run build` and `npx wrangler deploy`.
 

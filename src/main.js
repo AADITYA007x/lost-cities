@@ -130,6 +130,7 @@ async function init() {
   // test views: ?view=bath or ?view=street (start there, no intro)
   const presets = {
     bath: { target: f.greatBath.clone().setY(citadelTop(f)), offset: new THREE.Vector3(70, 65, 110) },
+    traced: f.traced ? { target: f.traced.clone(), offset: new THREE.Vector3(30, 45, 60) } : null,
     street: { target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 120)), offset: new THREE.Vector3(4, 24, 75) },
   };
   const preset = presets[params.get('view')];

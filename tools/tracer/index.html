@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plan Tracer · Lost Cities</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="./tracer.css" />
+  </head>
+  <body>
+    <aside class="side">
+      <h1>Plan tracer</h1>
+      <p class="hint">For local use only. The plan image stays on your computer; only the traced lines are saved.</p>
+
+      <section>
+        <h2>1 · Plan</h2>
+        <label class="file">Open plan image<input id="image-input" type="file" accept="image/*" /></label>
+        <div class="row">
+          <label>Source
+            <select id="source">
+              <option>Marshall 1931</option>
+              <option>Mackay 1938</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Plate <input id="plate" type="text" placeholder="e.g. XI" /></label>
+        </div>
+        <div class="row">
+          <label>Area
+            <select id="area">
+              <option>HR</option>
+              <option>VS</option>
+              <option>DK</option>
+              <option>SD</option>
+              <option>L</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Page <input id="page" type="text" placeholder="PDF page" /></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>2 · Calibrate</h2>
+        <div class="buttons">
+          <button data-mode="scale">Scale bar</button>
+          <button data-mode="north">North arrow</button>
+          <button data-mode="anchor">Anchor</button>
+        </div>
+        <p id="calib-status" class="status">Not calibrated</p>
+        <div class="row">
+          <label>Anchor x (m) <input id="anchor-x" type="number" step="1" /></label>
+          <label>Anchor z (m) <input id="anchor-z" type="number" step="1" /></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>3 · Trace</h2>
+        <div class="buttons">
+          <button data-mode="wall">Wall <kbd>W</kbd></button>
+          <button data-mode="drain">Drain <kbd>D</kbd></button>
+          <button data-mode="well">Well <kbd>O</kbd></button>
+          <button data-mode="select">Select <kbd>S</kbd></button>
+        </div>
+        <div class="row">
+          <label>Width (m) <input id="width" type="number" step="0.1" value="0.9" /></label>
+          <label>Standing (m) <input id="preserved" type="number" step="0.1" value="1.5" /></label>
+        </div>
+        <label>Certainty
+          <select id="certainty">
+            <option value="excavated">Excavated (on the plan)</option>
+            <option value="inferred">Inferred (completing a gap)</option>
+          </select>
+        </label>
+        <label>Note <input id="note" type="text" placeholder="optional" /></label>
+      </section>
+
+      <section>
+        <h2>4 · Save</h2>
+        <div class="buttons">
+          <button id="save">Download JSON</button>
+          <label class="file small">Open JSON<input id="json-input" type="file" accept="application/json" /></label>
+        </div>
+        <p id="counts" class="status"></p>
+      </section>
+
+      <details>
+        <summary>Keys</summary>
+        <ul class="keys">
+          <li><kbd>Click</kbd> add point</li>
+          <li><kbd>Enter</kbd> / double-click finish line</li>
+          <li><kbd>Shift</kbd> keep straight (along or across north)</li>
+          <li><kbd>Backspace</kbd> remove last point</li>
+          <li><kbd>Esc</kbd> cancel line</li>
+          <li><kbd>Ctrl Z</kbd> undo last object</li>
+          <li><kbd>Delete</kbd> remove selected</li>
+          <li><kbd>Wheel</kbd> zoom, <kbd>Space</kbd> or right-drag to pan</li>
+        </ul>
+      </details>
+    </aside>
+
+    <main class="stage">
+      <canvas id="canvas"></canvas>
+      <div id="empty" class="empty">
+        <p class="empty-title">No plan open yet</p>
+        <p>Open a scanned plan (PNG or JPG), or drag one here.</p>
+        <div class="buttons">
+          <label class="file big">Open plan image<input id="image-input-2" type="file" accept="image/*" /></label>
+          <button id="sample" type="button">Practise on a sample plan</button>
+        </div>
+        <p class="small-note">The sample is a made-up plan with a 100 ft scale bar, for learning the tool.</p>
+      </div>
+      <p id="mode-hint" class="mode-hint">Open a plan image to begin.</p>
+      <p id="cursor" class="cursor"></p>
+    </main>
+
+    <script type="module" src="./tracer.js"></script>
+  </body>
+</html>
