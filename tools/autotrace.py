@@ -119,6 +119,24 @@ def line_walls(mask, max_gap=10, min_len=6):
             continue  # thin lines, or stubs where the skeleton cuts across a corner
         segs.append([x0, y0, x1, y1, wd])
 
+    def open_sides(sg):
+        x0, y0, x1, y1, wd = sg
+        length = np.hypot(x1 - x0, y1 - y0)
+        n = max(3, int(length / 2))
+        nx, ny = -(y1 - y0) / max(length, 1e-6), (x1 - x0) / max(length, 1e-6)
+        off = wd / 2 + 3
+        hits = 0
+        for t in np.linspace(0.1, 0.9, n):
+            cx, cy = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            free = 0
+            for sgn in (1, -1):
+                px = int(round(cx + nx * off * sgn))
+                py = int(round(cy + ny * off * sgn))
+                if 0 <= px < w and 0 <= py < h and not mask[py, px]:
+                    free += 1
+            hits += free == 2
+        return hits / n
+
     # join pieces that continue each other: same direction, ends close, similar width
     def angle(sg):
         return np.arctan2(sg[3] - sg[1], sg[2] - sg[0]) % np.pi
@@ -166,9 +184,63 @@ def line_walls(mask, max_gap=10, min_len=6):
             dev = min(dev, np.pi / 2 - dev)
             if dev > np.radians(12) and ln < 4 * sg[4]:
                 continue
+            # a slanted line inside a solid block of wall is the skeleton cutting a
+            # corner, not a wall: a real slanted wall has open ground on both sides
+            if dev > np.radians(6) and open_sides(sg) < 0.4:
+                continue
             keep.append(sg)
         segs = keep
     return segs
+
+
+def split_on_gaps(segs, ink, min_gap):
+    """Cut each wall where its centre line crosses blank paper for at least min_gap
+    pixels: on the plans those gaps are doorways and passages, which joining pieces
+    of line can wrongly close. Lines that mostly cross blank paper (stray strokes
+    across a room) fall apart into short bits and are dropped."""
+    h, w = ink.shape
+    out = []
+    for x0, y0, x1, y1, wd in segs:
+        length = np.hypot(x1 - x0, y1 - y0)
+        n = max(2, int(length) + 1)
+        ux, uy = (x1 - x0) / max(length, 1e-6), (y1 - y0) / max(length, 1e-6)
+        nx, ny = -uy, ux
+        r = max(1, int(wd * 0.25))
+        on = np.zeros(n, bool)
+        for i in range(n):
+            t = i * length / (n - 1)
+            cx, cy = x0 + ux * t, y0 + uy * t
+            for k in range(-r, r + 1):
+                px = int(round(cx + nx * k))
+                py = int(round(cy + ny * k))
+                if 0 <= px < w and 0 <= py < h and ink[py, px]:
+                    on[i] = True
+                    break
+        # runs of ink, with short breaks (scan noise, thin lines) bridged
+        pieces = []
+        i = 0
+        while i < n:
+            if not on[i]:
+                i += 1
+                continue
+            s = i
+            while i < n:
+                if on[i]:
+                    i += 1
+                    continue
+                j = i
+                while j < n and not on[j]:
+                    j += 1
+                if j - i >= min_gap or j >= n:
+                    break
+                i = j
+            pieces.append((s, i - 1))
+        for a, b in pieces:
+            ta, tb = a * length / (n - 1), b * length / (n - 1)
+            if tb - ta < max(0.6 * wd, min_gap):
+                continue
+            out.append([x0 + ux * ta, y0 + uy * ta, x0 + ux * tb, y0 + uy * tb, wd])
+    return out
 
 
 def rectangles(mask):
@@ -281,6 +353,7 @@ def main():
     ap.add_argument('--min-rect', type=float, default=0.35, help='drop rectangles shorter than this many metres')
     ap.add_argument('--drop-glyphs', type=int, default=0, help='remove letter-shaped blobs up to this many px across')
     ap.add_argument('--rotate', default='auto', help="rect method: straighten walls first: 'auto', 'none' or degrees")
+    ap.add_argument('--door-gap', type=float, default=0.5, help='lines method: cut walls where the plan shows blank paper for this many metres (doorways); 0 to turn off')
     ap.add_argument('--method', default='lines', choices=['lines', 'rects'], help='lines: centre lines at any angle (default); rects: upright boxes')
     args = ap.parse_args()
 
@@ -296,7 +369,18 @@ def main():
 
     if args.method == 'lines':
         walls = []
-        for i, (x0, y0, x1, y1, wd) in enumerate(line_walls(mask), start=1):
+        segs = line_walls(mask)
+        if args.door_gap > 0:
+            # anything clearly darker than the paper counts as drawn (walls in any style)
+            paper = np.percentile(gray, 90)
+            ink = gray < paper - 40
+            for box in args.exclude:
+                x0, y0, x1, y1 = (int(v) for v in box.split(','))
+                ink[y0:y1, x0:x1] = False
+            before = len(segs)
+            segs = split_on_gaps(segs, ink, max(2, round(args.door_gap / args.mpp)))
+            print(f'doorways: {before} lines became {len(segs)} after cutting at gaps over {args.door_gap} m')
+        for i, (x0, y0, x1, y1, wd) in enumerate(segs, start=1):
             if np.hypot(x1 - x0, y1 - y0) * args.mpp + wd * args.mpp < args.min_rect:
                 continue
             walls.append({

@@ -1,5 +1,5 @@
 // Cloudflare Worker: serves the built site from ./dist and handles /api/* routes.
-// Milestone 0: only a health check. The Gemini chat proxy arrives in a later milestone.
+// For now only a health check. The Gemini chat proxy (/api/chat) arrives in milestone 11.
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -17,8 +17,8 @@ export default {
     if (url.pathname === '/api/health') {
       return json({
         ok: true,
-        app: 'mohenjo-daro',
-        milestone: 0,
+        app: 'lost-cities',
+        site: 'mohenjo-daro',
         chatConfigured: Boolean(env.GEMINI_API_KEY),
         time: new Date().toISOString(),
       });
