@@ -169,29 +169,50 @@ export function buildCity({ lowPower = false } = {}) {
   gridGroup.rotation.y = GRID.angle;
   group.add(gridGroup);
 
-  const brick = createBrickMaterial();
-  const mudBrick = createBrickMaterial({ tone: '#a7865f' });
-  const plaster = createEarthMaterial({ tone: '#c2a481' });
-  const ground = createEarthMaterial({ tone: '#ae9070' });
-  const paveMat = createBrickMaterial({ tone: '#a97452' });
-
-  group.add(platformMesh(citadel.outline, citadel.y, [plan.pool], mudBrick, ground));
-  group.add(platformMesh(lower.outline, lower.y, [], mudBrick, ground));
-
-  const add = (parent, batch, material) => {
-    if (!batch.vertexCount) return null;
-    const mesh = new THREE.Mesh(batch.toGeometry(), material);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
+  // one shared uniform drives the certainty layer for every material
+  const mixUniform = { value: 0 };
+  const kinds = {
+    walls: (opts) => createBrickMaterial(opts),
+    roofs: (opts) => createEarthMaterial({ tone: '#c2a481', ...opts }),
+    paving: (opts) => createBrickMaterial({ tone: '#a97452', ...opts }),
+    ramps: (opts) => createEarthMaterial({ tone: '#ae9070', ...opts }),
   };
-  for (const [parent, b] of [[group, world], [gridGroup, grid]]) {
-    add(parent, b.walls, brick);
-    add(parent, b.roofs, plaster);
-    add(parent, b.paving, paveMat);
-    add(parent, b.ramps, ground);
+  const materials = {};
+  for (const [kind, make] of Object.entries(kinds)) {
+    materials[kind] = {
+      base: make({}),
+      ghost: make({ evidence: 'ghost', mixUniform }),
+      sketch: make({ evidence: 'sketch', mixUniform }),
+    };
   }
+  const brick = materials.walls.base;
+  const mudBrick = createBrickMaterial({ tone: '#a7865f' });
+  const ground = createEarthMaterial({ tone: '#ae9070' });
+
+  const citadelMesh = platformMesh(citadel.outline, citadel.y, [plan.pool], mudBrick, ground);
+  const lowerMesh = platformMesh(lower.outline, lower.y, [], mudBrick, ground);
+  citadelMesh.userData = { kind: 'platform', certainty: CERTAINTY.inferred, platform: 'citadel' };
+  lowerMesh.userData = { kind: 'platform', certainty: CERTAINTY.inferred, platform: 'lowerTown' };
+  group.add(citadelMesh, lowerMesh);
+
+  const certaintyEntries = [];
+  const pickables = [citadelMesh, lowerMesh];
+  for (const [parent, b, frame] of [[group, world, 'world'], [gridGroup, grid, 'grid']]) {
+    for (const kind of Object.keys(kinds)) {
+      for (const { geometry, certainty } of b[kind].toGeometries()) {
+        const set = materials[kind];
+        const mesh = new THREE.Mesh(geometry, set.base);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.userData = { kind, certainty, frame };
+        parent.add(mesh);
+        pickables.push(mesh);
+        if (certainty === CERTAINTY.inferred) certaintyEntries.push({ mesh, base: set.base, evidence: set.ghost });
+        if (certainty === CERTAINTY.imagined) certaintyEntries.push({ mesh, base: set.base, evidence: set.sketch });
+      }
+    }
+  }
+
   const wells = [
     ...world.wells,
     ...grid.wells.map((w) => {
@@ -199,7 +220,17 @@ export function buildCity({ lowPower = false } = {}) {
       return { ...w, x, z };
     }),
   ];
-  if (wells.length) for (const m of wellMeshes(wells, brick)) group.add(m);
+  const wellExtras = [];
+  for (const cert of [CERTAINTY.excavated, CERTAINTY.inferred, CERTAINTY.imagined]) {
+    const list = wells.filter((w) => w.cert === cert);
+    if (!list.length) continue;
+    for (const m of wellMeshes(list, brick)) {
+      m.userData = { kind: 'well', certainty: cert, frame: 'world' };
+      group.add(m);
+      // in the evidence view, wells we only imagine are hidden
+      if (cert === CERTAINTY.imagined) wellExtras.push({ object: m, hideInEvidence: true });
+    }
+  }
 
   // water in the Great Bath (it may not always have been full)
   const poolWater = new THREE.Mesh(
@@ -208,7 +239,9 @@ export function buildCity({ lowPower = false } = {}) {
   );
   poolWater.rotation.x = -Math.PI / 2;
   poolWater.position.set((plan.pool.x0 + plan.pool.x1) / 2, citadel.y + 0.3 - 0.7, (plan.pool.z0 + plan.pool.z1) / 2);
+  poolWater.userData = { kind: 'pool', certainty: CERTAINTY.imagined, frame: 'world' };
   group.add(poolWater);
+  pickables.push(poolWater);
 
   const [ccx, ccz] = centroidOf(citadel.outline);
   const [lcx, lcz] = centroidOf(lower.outline);
@@ -243,7 +276,19 @@ export function buildCity({ lowPower = false } = {}) {
     tracedPlates: traces.length,
     tracedAreas: covered.map((c) => c.area),
     vertices: [world, grid].reduce((n, b) => n + b.walls.vertexCount + b.roofs.vertexCount + b.paving.vertexCount, 0),
+    meshes: pickables.length,
   };
 
-  return { group, platformHeightAt, features, stats, rects: { citadel, lowerTown: lower } };
+  return {
+    group,
+    platformHeightAt,
+    features,
+    stats,
+    rects: { citadel, lowerTown: lower },
+    certainty: { entries: certaintyEntries, mixUniform, extra: wellExtras },
+    pickables,
+    plan,
+    covered,
+    firstStreetSpan: first ? first.span : null,
+  };
 }

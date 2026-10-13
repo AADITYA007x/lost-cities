@@ -6,6 +6,8 @@ import { buildCity } from './city/index.js';
 import { createFlight, createCameraLimits } from './flight.js';
 import { createLabels, createNotePanel } from './ui.js';
 import { LANDSCAPE_NOTE, PLACE_LABELS } from './content/landscape.js';
+import { createCertaintyLayer } from './certainty.js';
+import { createInfo } from './info.js';
 
 const params = new URLSearchParams(location.search);
 const skipIntro = params.has('skipintro');
@@ -85,6 +87,8 @@ function savePreference(sound) {
 
 // ---------- world ----------
 let world = null;
+let certainty = null;
+let info = null;
 let water = null;
 let labels = null;
 let limit = () => {};
@@ -94,13 +98,26 @@ async function init() {
   const data = await loadTerrainData();
   const terrain = buildTerrain(data);
   scene.add(terrain.mesh);
+  terrain.mesh.userData = { kind: 'terrain', certainty: 1 };
   water = createWater({ size: terrain.size, level: terrain.waterLevel, sunDirection, haze });
+  water.userData = { kind: 'water', certainty: 1 };
   scene.add(water);
   scene.add(createHorizonGround(terrain.edgeLevel));
 
   const city = buildCity({ lowPower });
   scene.add(city.group);
   const groundAt = (x, z) => Math.max(terrain.heightAt(x, z), city.platformHeightAt(x, z));
+
+  certainty = createCertaintyLayer(city.certainty);
+  info = createInfo({
+    canvas,
+    camera,
+    scene,
+    city,
+    terrainMeshes: [terrain.mesh, water],
+    panel: document.getElementById('info-panel'),
+    groundAt,
+  });
 
   const f = city.features;
   const siteCenter = f.citadel.clone().lerp(f.lowerTown, 0.5);
@@ -148,6 +165,10 @@ async function init() {
   };
   const preset = presets[params.get('view')];
 
+  if (params.get('mode') === 'evidence') {
+    setTimeout(() => certaintyBox.querySelector('[data-mode=evidence]').click(), 300);
+  }
+
   if (skipIntro || preset) {
     camera.position.copy(preset ? preset.target.clone().add(preset.offset) : home.position);
     controls.target.copy(preset ? preset.target : home.target);
@@ -176,6 +197,8 @@ function begin(sound, instant = false) {
   const settle = () => {
     controls.enabled = true;
     noteButton.hidden = false;
+    certaintyBox.hidden = false;
+    info.enable(true);
     labels.show(true);
   };
 
@@ -191,6 +214,20 @@ opening.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-sound]');
   if (!button || button.disabled || !world) return;
   begin(button.dataset.sound);
+});
+
+// ---------- certainty switch ----------
+const certaintyBox = document.getElementById('certainty');
+certaintyBox.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-mode]');
+  if (!b || !certainty) return;
+  certainty.set(b.dataset.mode);
+  certaintyBox.classList.toggle('evidence', b.dataset.mode === 'evidence');
+  certaintyBox.querySelectorAll('button[data-mode]').forEach((x) => {
+    const on = x === b;
+    x.classList.toggle('on', on);
+    x.setAttribute('aria-checked', String(on));
+  });
 });
 
 // double-click / double-tap: glide back to the home view
@@ -235,5 +272,7 @@ renderer.setAnimationLoop((now) => {
   sky.position.copy(camera.position);
   if (water) water.material.uniforms.uTime.value = t;
   labels?.update(camera);
+  certainty?.update(dt);
+  info?.update(dt);
   renderer.render(scene, camera);
 });

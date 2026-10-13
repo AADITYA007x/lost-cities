@@ -91,7 +91,19 @@ export function buildTraced(traces, groundAt, out) {
       out.wells.push({ x, z, y: groundAt(x, z), cert: well.certainty === 'inferred' ? CERTAINTY.inferred : CERTAINTY.excavated });
     }
 
-    if (x0 < x1) covered.push({ x0: x0 - 2, x1: x1 + 2, z0: z0 - 2, z1: z1 + 2, area: data.meta?.area });
+    if (x0 < x1) {
+      covered.push({
+        x0: x0 - 2,
+        x1: x1 + 2,
+        z0: z0 - 2,
+        z1: z1 + 2,
+        area: data.meta?.area,
+        source: data.meta?.source,
+        plate: data.meta?.plate,
+        level: data.meta?.level,
+        reviewed: Boolean(data.meta?.reviewed),
+      });
+    }
   }
   return covered;
 }

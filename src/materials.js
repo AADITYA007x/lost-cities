@@ -55,16 +55,70 @@ function addWorldVaryings(shader) {
     );
 }
 
+// ---------- certainty layer ----------
+// Evidence variants of a material: "ghost" (inferred: translucent with soft edges) and
+// "sketch" (imagined: faint fill, drawn edges). uMix runs from 0 (the living city)
+// to 1 (the evidence view); the shared uniform object lets one animation drive all.
+export const EVIDENCE_LOOK = {
+  ghost: { tint: new THREE.Color('#ead8b8'), tintAmount: 0.7, fill: 0.22, line: 0.62 },
+  sketch: { tint: new THREE.Color('#f3e7d2'), tintAmount: 1.0, fill: 0.025, line: 0.5 },
+};
+
+function addEvidence(shader, evidence, mixUniform) {
+  if (!evidence) return;
+  const look = EVIDENCE_LOOK[evidence];
+  shader.uniforms.uMix = mixUniform;
+  shader.uniforms.uTint = { value: look.tint };
+  shader.uniforms.uTintAmount = { value: look.tintAmount };
+  shader.uniforms.uFill = { value: look.fill };
+  shader.uniforms.uLine = { value: look.line };
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', `#include <common>
+      attribute vec2 aQuad;
+      varying vec2 vQuad;`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+      vQuad = aQuad;`);
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>
+      varying vec2 vQuad;
+      uniform float uMix;
+      uniform vec3 uTint;
+      uniform float uTintAmount;
+      uniform float uFill;
+      uniform float uLine;`)
+    .replace('#include <emissivemap_fragment>', `
+      {
+        // edges of each face, about 1.3 px wide on screen
+        vec2 fwq = max(fwidth(vQuad), vec2(1e-4));
+        vec2 e = min(vQuad, 1.0 - vQuad) / fwq;
+        float edgeLine = 1.0 - smoothstep(0.6, 1.6, min(e.x, e.y));
+        // far away, faces are only a few pixels across and their edges would pile up
+        float tiny = smoothstep(0.06, 0.35, max(fwq.x, fwq.y));
+        edgeLine *= 1.0 - 0.85 * tiny;
+        vec3 evidenceColor = mix(diffuseColor.rgb, uTint, uTintAmount);
+        diffuseColor.rgb = mix(diffuseColor.rgb, evidenceColor, uMix);
+        diffuseColor.a *= mix(1.0, mix(uFill, uLine, edgeLine), uMix);
+      }
+      #include <emissivemap_fragment>`);
+}
+
+function evidenceSetup(material, evidence) {
+  if (!evidence) return;
+  material.transparent = true;
+  material.depthWrite = false;
+}
+
 // A MeshStandardMaterial that paints bricks at real size from world position,
 // so every wall, whatever its size, gets correctly scaled courses (English bond:
 // a course of stretchers, then a course of headers). Joints fade out with
 // distance to avoid shimmering.
-export function createBrickMaterial({ tone = '#b5774c' } = {}) {
+export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUniform = null } = {}) {
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(tone),
     roughness: 0.94,
     metalness: 0.0,
   });
+  evidenceSetup(material, evidence);
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uBrickL = { value: BRICK.length + BRICK.joint };
@@ -144,19 +198,21 @@ export function createBrickMaterial({ tone = '#b5774c' } = {}) {
           diffuseColor.rgb = mix(mortar, tone, brickMask);
         }`
       );
+    addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => 'md-brick-v2';
+  material.customProgramCacheKey = () => `md-brick-v2-${evidence || 'solid'}`;
   return material;
 }
 
 // Dusty, trodden earth with soft large-scale variation.
-export function createEarthMaterial({ tone = '#a8845f' } = {}) {
+export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUniform = null } = {}) {
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(tone),
     roughness: 1.0,
     metalness: 0.0,
   });
+  evidenceSetup(material, evidence);
 
   material.onBeforeCompile = (shader) => {
     addWorldVaryings(shader);
@@ -187,8 +243,9 @@ export function createEarthMaterial({ tone = '#a8845f' } = {}) {
           diffuseColor.rgb = c;
         }`
       );
+    addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => 'md-earth-v1';
+  material.customProgramCacheKey = () => `md-earth-v1-${evidence || 'solid'}`;
   return material;
 }

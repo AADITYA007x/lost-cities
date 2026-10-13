@@ -1,6 +1,6 @@
 import { CERTAINTY } from './batch.js';
 import { buildHouse } from './houses.js';
-import { subdivide, overlaps, pointInPolygon, fromSitePlan } from './layout.js';
+import { subdivide, overlaps, pointInPolygon, fromSitePlan, EXCAVATED_AREAS } from './layout.js';
 
 const E = CERTAINTY.excavated;
 const I = CERTAINTY.inferred;
@@ -23,7 +23,11 @@ export function planCitadel(rect, { bathTraced = false } = {}) {
   const pool = { x0: pcx - 3.5, x1: pcx + 3.5, z0: pcz - 6, z1: pcz + 6, depth: 2.4 };
 
   // The "granary" or "Great Hall": a brick podium about 46 x 23 m crossed by narrow passages.
-  const hall = { x0: hallWest, x1: hallWest + 46, z0: bath.z0 + 22, z1: bath.z0 + 45 };
+  // When the bath plan is traced, the hall's eastern blocks are on it (scene x about -488 to -474,
+  // z -118 to -90); the generated hall continues them westward to the edge of the mound.
+  const hall = bathTraced
+    ? { x0: rect.x0 + 8, x1: -474, z0: -116, z1: -92 }
+    : { x0: hallWest, x1: hallWest + 46, z0: bath.z0 + 22, z1: bath.z0 + 45 };
 
   // The so-called "College of Priests" across the lane, north-east of the bath.
   const college = { x0: bath.x1 - 6, x1: Math.min(rect.x1 - 6, bath.x1 + 64), z0: bath.z0 - 30, z1: bath.z0 - 6 };
@@ -53,7 +57,9 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
   }
 
   if (!plan.bathTraced) buildGeneratedBath();
-  if (!covers(hall)) buildHall();
+  // generate the hall only where no traced plan covers it
+  const tracedLeft = Math.min(...covered.filter((c) => overlaps(hall, c, 0)).map((c) => c.x0), hall.x1);
+  buildHall(tracedLeft);
   if (!covers(college)) buildHouse({ ...college, open: { n: true, s: true, e: true, w: true } }, y, rng, out, { known: true, detail });
   if (!covers(pillared)) buildPillared();
   buildOthers();
@@ -110,10 +116,11 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
     roofs.box(court.x1 + pier, ry, court.z0 - pier, bath.x1 - 0.5, ry + 0.3, court.z1 + pier, M);
   }
 
-  function buildHall() {
+  function buildHall(clipX1) {
     // ---------- Great Hall ("granary"): brick podium with blocks and passages ----------
+    if (clipX1 - hall.x0 < 4) return;
     const podiumTop = y + 1.4;
-    walls.box(hall.x0, y, hall.z0, hall.x1, podiumTop, hall.z1, E);
+    walls.box(hall.x0, y, hall.z0, clipX1, podiumTop, hall.z1, I);
     const cols = 9;
     const rows = 3;
     const gap = 1.3;
@@ -123,7 +130,8 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
       for (let j = 0; j < rows; j++) {
         const bx = hall.x0 + gap + i * (bw + gap);
         const bz = hall.z0 + gap + j * (bd + gap);
-        walls.box(bx, podiumTop, bz, bx + bw, podiumTop + 1.7, bz + bd, E);
+        if (bx + bw > clipX1) continue;
+        walls.box(bx, podiumTop, bz, bx + bw, podiumTop + 1.7, bz + bd, I);
       }
     }
     // a timber hall above the blocks is a guess; shown as a light roof on posts
@@ -168,7 +176,10 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
       if (!inside(lot)) continue;
       if (reserved.some((r) => overlaps(lot, r, 5))) continue;
       if (rng.chance(0.45)) continue; // open courts and yards
-      buildHouse(lot, y, rng, out, { known: false, detail });
+      const cx = (lot.x0 + lot.x1) / 2;
+      const cz = (lot.z0 + lot.z1) / 2;
+      const known = EXCAVATED_AREAS.some((a) => cx >= a.x0 && cx <= a.x1 && cz >= a.z0 && cz <= a.z1);
+      buildHouse(lot, y, rng, out, { known, detail });
     }
   }
 }

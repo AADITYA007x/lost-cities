@@ -36,6 +36,20 @@
     <button id="note-button" type="button" class="note-button" aria-expanded="false" aria-controls="note-panel" hidden>
       How true is this?
     </button>
+
+    <div id="certainty" class="certainty" hidden>
+      <div id="legend" class="legend" aria-hidden="true">
+        <span class="lg excavated"><i></i>Excavated</span>
+        <span class="lg inferred"><i></i>Inferred</span>
+        <span class="lg imagined"><i></i>Imagined</span>
+      </div>
+      <div class="mode-switch" role="radiogroup" aria-label="View">
+        <button type="button" role="radio" data-mode="alive" aria-checked="true" class="on">Alive</button>
+        <button type="button" role="radio" data-mode="evidence" aria-checked="false">Evidence</button>
+      </div>
+    </div>
+
+    <aside id="info-panel" class="info-panel" aria-live="polite"></aside>
     <aside id="note-panel" class="note-panel" aria-label="How true is this?"></aside>
 
     <script type="module" src="/src/main.js"></script>
