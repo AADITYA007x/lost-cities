@@ -537,7 +537,6 @@ h1 {
   backdrop-filter: blur(6px);
 }
 
-.walk-button:hover,
 .walk-button:focus-visible {
   background: rgba(212, 178, 106, 0.2);
   outline: none;
@@ -556,7 +555,6 @@ h1 {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.8s ease, visibility 0.8s;
-  pointer-events: none;
 }
 
 .minimap.on {
@@ -627,5 +625,194 @@ h1 {
   .walk-button {
     font-size: 15px;
     padding: 6px 16px;
+  }
+}
+
+/* ---------- time and season ---------- */
+.time-button {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--serif);
+  font-size: 17px;
+  padding: 7px 18px 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 178, 106, 0.55);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.time-button[hidden] {
+  display: none;
+}
+
+.time-button:focus-visible {
+  background: rgba(212, 178, 106, 0.2);
+  outline: none;
+}
+
+.time-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #ffe3a6, #e0a04f);
+  box-shadow: 0 0 8px rgba(240, 180, 90, 0.7);
+}
+
+.time-button.dark .time-dot {
+  background: transparent;
+  box-shadow: inset -3px -1px 0 0 #dfe5f0;
+}
+
+.time-panel {
+  position: fixed;
+  top: calc(max(16px, env(safe-area-inset-top)) + 50px);
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 7;
+  width: min(330px, calc(100vw - 32px));
+  padding: 14px 18px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+}
+
+.time-panel.open {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+}
+
+.time-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.time-head h2 {
+  margin: 0;
+  font-weight: 500;
+  font-size: 20px;
+}
+
+.time-panel .close {
+  font-size: 24px;
+  line-height: 1;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.time-row {
+  display: block;
+  margin-top: 10px;
+}
+
+.time-now {
+  display: block;
+  color: var(--gold);
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+
+.time-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--gold);
+}
+
+.time-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.time-play {
+  margin-top: 12px;
+  width: 100%;
+  font-family: var(--serif);
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.time-play[aria-pressed='true'] {
+  border-color: rgba(212, 178, 106, 0.6);
+  background: rgba(212, 178, 106, 0.16);
+}
+
+.season-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.season-switch button {
+  font-family: var(--serif);
+  font-size: 15px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.season-switch button small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.season-switch button.on {
+  border-color: rgba(212, 178, 106, 0.6);
+  background: rgba(212, 178, 106, 0.16);
+}
+
+.time-note {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .time-button {
+    font-size: 15px;
+    padding: 6px 14px 6px 12px;
+  }
+
+  .time-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+@media (hover: hover) {
+  .walk-button:hover,
+  .time-button:hover {
+    background: rgba(212, 178, 106, 0.2);
   }
 }

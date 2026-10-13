@@ -30,6 +30,13 @@ function wallWithDoor(batch, axis, a0, a1, fixed0, fixed1, y, h, door, cert) {
   }
 }
 
+// lamps use their own random numbers from the plot position, so adding them does not
+// change the houses themselves
+const lampRand = (lot, k) => {
+  const v = Math.sin(lot.x0 * 12.9898 + lot.z0 * 78.233 + k * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+};
+
 export function buildHouse(lot, y, rng, out, { known, detail }) {
   const { walls, roofs, wells } = out;
   const wallCert = known ? CERTAINTY.inferred : CERTAINTY.imagined;
@@ -68,6 +75,10 @@ export function buildHouse(lot, y, rng, out, { known, detail }) {
     } else {
       wallWithDoor(walls, 'x', ix0, ix1, split - t / 2, split + t / 2, y, H, ix0 + iw * 0.4, wallCert);
       roofs.box(ix0 - 0.2, y + H, iz0 - 0.2, ix1 + 0.2, y + H + 0.3, split, roofCert);
+    }
+    // an evening lamp in the open yard (imagined)
+    if (out.lamps && lampRand(lot, 1) < 0.5) {
+      out.lamps.push(alongX ? { x: (split + ix1) / 2, z: iz0 + 0.8, y: y + 1.5 } : { x: ix0 + 0.8, z: (split + iz1) / 2, y: y + 1.5 });
     }
     return;
   }
@@ -122,6 +133,12 @@ export function buildHouse(lot, y, rng, out, { known, detail }) {
     walls.box(a0, yu, b0, a1, yu + hu, b0 + ut, upperCert);
     walls.box(a0, yu, b1 - ut, a1, yu + hu, b1, upperCert);
     roofs.box(a0 - 0.15, yu + hu, b0 - 0.15, a1 + 0.15, yu + hu + 0.3, b1 + 0.15, roofCert);
+  }
+
+  // an evening lamp by a courtyard wall (imagined)
+  if (out.lamps && lampRand(lot, 1) < 0.8) {
+    const east = lampRand(lot, 2) < 0.5;
+    out.lamps.push({ x: east ? cx1 - 0.6 : cx0 + 0.6, z: cz0 + 0.8 + lampRand(lot, 3) * Math.max(0, cz1 - cz0 - 1.6), y: y + 1.5 });
   }
 
   // a well in some courtyards (wells were common in houses)

@@ -211,6 +211,8 @@ export function createWater({ size, level, sunDirection, haze }) {
         uSky: { value: new THREE.Color('#c9b394') },
         uSun: { value: new THREE.Color('#ffe2b8') },
         uSunDir: { value: sunDirection.clone().normalize() },
+        uLight: { value: new THREE.Color(1, 1, 1) },
+        uSunStrength: { value: 1 },
       },
     ]),
     vertexShader: `
@@ -231,6 +233,8 @@ export function createWater({ size, level, sunDirection, haze }) {
       uniform vec3 uSky;
       uniform vec3 uSun;
       uniform vec3 uSunDir;
+      uniform vec3 uLight;
+      uniform float uSunStrength;
       varying vec3 vWorld;
 
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -250,12 +254,12 @@ export function createWater({ size, level, sunDirection, haze }) {
 
         vec3 view = normalize(cameraPosition - vWorld);
         float fres = pow(1.0 - max(dot(view, nrm), 0.0), 3.0);
-        vec3 col = mix(uDeep, uShallow, 0.35 + n1 * 0.4);
+        vec3 col = mix(uDeep, uShallow, 0.35 + n1 * 0.4) * uLight;
         col = mix(col, uSky, clamp(fres * 0.5 + 0.06, 0.0, 0.7));
 
         vec3 h = normalize(normalize(uSunDir) + view);
         float spec = pow(max(dot(nrm, h), 0.0), 180.0);
-        col += uSun * spec * 1.2;
+        col += uSun * spec * 1.2 * uSunStrength;
 
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>

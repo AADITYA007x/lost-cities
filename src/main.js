@@ -12,6 +12,9 @@ import { createWalk } from './walk.js';
 import { buildCollision } from './collision.js';
 import { createMinimap } from './minimap.js';
 import { FIRST_STREET, pointInPolygon } from './city/layout.js';
+import { SEASONS, POLE, sunDirectionAt, lightAt, describeTime } from './daylight.js';
+import { createLamps } from './lamps.js';
+import { createTimeControl } from './time-control.js';
 
 const params = new URLSearchParams(location.search);
 const skipIntro = params.has('skipintro');
@@ -40,7 +43,7 @@ let walking = false;
 const fovFor = () => (walking ? (portrait() ? 72 : 62) : portrait() ? 60 : 40);
 const camera = new THREE.PerspectiveCamera(fovFor(), window.innerWidth / window.innerHeight, 1, 40000);
 
-// ---------- light: late afternoon sun from the west-south-west ----------
+// ---------- light: the sun for the chosen hour and season (see daylight.js) ----------
 const sunDirection = new THREE.Vector3(-0.86, 0.34, 0.38).normalize();
 
 const hemi = new THREE.HemisphereLight('#e9d6bd', '#5e4630', 0.75);
@@ -56,7 +59,7 @@ sun.shadow.normalBias = 0.35;
 scene.add(sun);
 scene.add(sun.target);
 
-const sky = createSky({ sunDirection, haze });
+const sky = createSky({ sunDirection, haze, pole: POLE });
 scene.add(sky);
 
 // ---------- controls ----------
@@ -118,6 +121,7 @@ async function init() {
   const groundAt = (x, z) => Math.max(terrain.heightAt(x, z), city.platformHeightAt(x, z));
 
   certainty = createCertaintyLayer(city.certainty);
+  lampPoints = city.lamps;
   info = createInfo({
     canvas,
     camera,
@@ -163,6 +167,7 @@ async function init() {
   const onPlatform = (x, z) => pointInPolygon(x, z, city.rects.lowerTown.outline) || pointInPolygon(x, z, city.rects.citadel.outline);
   walk = createWalk({ camera, canvas, groundAt, onPlatform, joystickEl: document.getElementById('joystick') });
   world.onPlatform = onPlatform;
+  applyTime();
 
   // test views: ?view=bath or ?view=street (start there, no intro)
   const presets = {
@@ -222,6 +227,7 @@ function begin(sound, instant = false) {
     info.enable(true);
     labels.show(true);
     walkButton.hidden = false;
+    timeButton.hidden = false;
   };
 
   if (instant) {
@@ -251,6 +257,97 @@ certaintyBox.addEventListener('click', (e) => {
     x.setAttribute('aria-checked', String(on));
   });
 });
+
+// ---------- time of day and season ----------
+const timeButton = document.getElementById('time-button');
+const timeState = {
+  hour: clampHour(Number(params.get('time') ?? 15.5)),
+  season: SEASONS[params.get('season')] ? params.get('season') : 'cool',
+  playing: false,
+};
+function clampHour(h) {
+  return Number.isFinite(h) ? ((h % 24) + 24) % 24 : 15.5;
+}
+let lamps = null;
+let lampPoints = null;
+let lastLight = null;
+let timeShownAt = 0;
+const timeControl = createTimeControl({
+  button: timeButton,
+  panel: document.getElementById('time-panel'),
+  state: timeState,
+  onChange: applyTime,
+});
+
+// lamps appear the first time it gets dark; the traced areas get a few too, placed
+// where the walls leave room
+function ensureLamps() {
+  if (lamps || !lampPoints) return;
+  ensureCollision();
+  const extra = [];
+  let seed = 1;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  for (const c of city.covered) {
+    const n = Math.round(((c.x1 - c.x0) * (c.z1 - c.z0)) / 220);
+    for (let i = 0; i < n * 4 && extra.length < 4000; i++) {
+      const x = c.x0 + rand() * (c.x1 - c.x0);
+      const z = c.z0 + rand() * (c.z1 - c.z0);
+      if (rand() > 0.35 || !world.onPlatform(x, z) || !collision.free(x, z, 0.7)) continue;
+      extra.push({ x, z, y: world.groundAt(x, z) + 1.5 });
+    }
+  }
+  lamps = createLamps([...lampPoints, ...extra], { mixUniform: city.certainty.mixUniform });
+  scene.add(lamps.mesh);
+}
+
+function applyTime() {
+  const day = SEASONS[timeState.season].day;
+  sunDirectionAt(day, timeState.hour, sunDirection);
+  const L = lightAt(sunDirection, timeState.season);
+  lastLight = L;
+  // below the horizon the light comes from the sky alone
+  sun.color.copy(L.sun);
+  sun.intensity = L.sunI * THREE.MathUtils.smoothstep(sunDirection.y, -0.01, 0.05);
+  hemi.color.copy(L.hemiSky);
+  hemi.groundColor.copy(L.hemiGround);
+  hemi.intensity = L.hemiI;
+  renderer.toneMappingExposure = L.exposure;
+  haze.copy(L.low);
+  scene.fog.color.copy(L.low);
+  scene.fog.density = L.fogDensity;
+  const u = sky.material.uniforms;
+  u.uTop.value.copy(L.top);
+  u.uMid.value.copy(L.mid);
+  u.uLow.value.copy(L.low);
+  u.uSun.value.copy(L.sun).multiplyScalar(THREE.MathUtils.smoothstep(sunDirection.y, -0.06, 0.02));
+  u.uSunDir.value.copy(sunDirection);
+  u.uStars.value = L.stars;
+  u.uStarAngle.value = (timeState.hour / 24) * Math.PI * 2;
+  if (water) {
+    const w = water.material.uniforms;
+    w.uSunDir.value.copy(sunDirection);
+    w.uSky.value.copy(L.mid).lerp(L.low, 0.5);
+    w.uSun.value.copy(L.sun);
+    w.uSunStrength.value = THREE.MathUtils.smoothstep(sunDirection.y, 0.0, 0.08);
+    const lv = THREE.MathUtils.clamp(0.18 + (L.sunI / 2.9) * 0.82, 0.18, 1.05);
+    w.uLight.value.copy(L.hemiSky).multiplyScalar(lv / Math.max(0.5, (L.hemiSky.r + L.hemiSky.g + L.hemiSky.b) / 3));
+  }
+  if (params.has('debug')) window.__time = { timeState, L, sun: sun.intensity, hemi: hemi.intensity };
+  if (L.glow > 0.01) ensureLamps();
+  if (world) {
+    const t = sun.target.position;
+    sun.position.copy(t).addScaledVector(sunDirection, 3500);
+  }
+  // while the day plays, refresh the words a few times a second, not every frame
+  const nowMs = performance.now();
+  if (!timeState.playing || nowMs - timeShownAt > 250) {
+    timeShownAt = nowMs;
+    timeControl.show({ phrase: describeTime(timeState.hour, L.elevation), dark: L.elevation < -4 });
+  }
+}
 
 // ---------- walk mode ----------
 const walkButton = document.getElementById('walk-button');
@@ -315,6 +412,7 @@ function enterWalk({ instant = false, firstStreet = false } = {}) {
     controls.enabled = false;
     labels.show(false);
     info.close();
+    info.showOutlines(false);
     walkButton.textContent = 'Fly';
     walkButton.setAttribute('aria-label', 'Leave walk mode and fly');
     const go = () => {
@@ -356,6 +454,7 @@ function exitWalk() {
   camera.far = 40000;
   onResize();
   setShadowsAround(world.siteCenter.x, world.siteCenter.z, false);
+  info.showOutlines(true);
   walkButton.textContent = 'Walk';
   walkButton.setAttribute('aria-label', 'Walk the streets at eye height');
   // start the flight from where the walker was looking, so the view turns smoothly
@@ -398,6 +497,11 @@ function onResize() {
 window.addEventListener('resize', onResize);
 
 const timer = new THREE.Timer();
+function lampScale() {
+  // pixels per metre at one metre away, for the lamp glows
+  return (renderer.domElement.height / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+}
+
 renderer.setAnimationLoop((now) => {
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
@@ -416,6 +520,14 @@ renderer.setAnimationLoop((now) => {
     if (world) limit();
   }
 
+  if (timeState.playing && world) {
+    // a whole day in about two minutes
+    timeState.hour = (timeState.hour + dt * 0.2) % 24;
+    applyTime();
+  }
+  if (lamps && lastLight) {
+    lamps.update({ time: t, glow: lastLight.glow, fog: scene.fog.density, scale: lampScale() });
+  }
   sky.position.copy(camera.position);
   if (water) water.material.uniforms.uTime.value = t;
   labels?.update(camera);

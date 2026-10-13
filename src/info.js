@@ -68,6 +68,9 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
   const outlineMat = new THREE.LineBasicMaterial({ color: '#e2bf72', transparent: true, opacity: 0, depthTest: false });
   let outline = null;
   let outlineFade = 0;
+  // the outline is drawn through walls, which reads well from above but not at eye
+  // level, so it is switched off while walking
+  let outlinesOn = true;
 
   function setOutline(shape) {
     if (outline) {
@@ -75,7 +78,7 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       outline.geometry.dispose();
       outline = null;
     }
-    if (!shape) return;
+    if (!shape || !outlinesOn) return;
     let pts = [];
     if (shape.rect) {
       const r = shape.rect;
@@ -160,6 +163,10 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       enabled = on;
     },
     close,
+    showOutlines(on) {
+      outlinesOn = on;
+      if (!on) setOutline(null);
+    },
     update(dt) {
       if (!outline) return;
       outlineFade = Math.min(1, outlineFade + dt * 1.5);

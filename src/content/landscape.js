@@ -49,6 +49,16 @@ export const LANDSCAPE_NOTE = {
       text: 'The Indus has changed course many times. It flowed near the city, but its channel in 2500 BCE is not known. We use today’s channel as a stand-in.',
     },
     {
+      level: 'inferred',
+      label: 'Sun and seasons',
+      text: 'The sun\u2019s path is calculated for Mohenjo-daro\u2019s latitude, with the Earth\u2019s tilt as it was around 2500 BCE (about 24\u00b0, a little more than today\u2019s 23.4\u00b0). Times are sun times, not clock times. The seasons follow today\u2019s pattern at the site: a cool winter, a very hot early summer, the summer monsoon, and the clear months after it. Climate studies suggest the summer monsoon was somewhat stronger then and weakened over the following centuries; how much is debated. The colours of sky and haze are an impression, not a measurement.',
+    },
+    {
+      level: 'imagined',
+      label: 'At night',
+      text: 'The small lamps in courtyards are imagined: how homes were lit after dark is not well known. The stars are a generic field, not a map of the sky in 2500 BCE, when the star nearest the north celestial pole was Thuban, not today\u2019s Pole Star.',
+    },
+    {
       level: 'simplified',
       label: 'Simplified ground',
       text: 'The elevation data shows today’s ground. River floods have since laid several metres of silt across the plain, so the ancient plain lay lower than today’s fields. We don’t model that yet, and we smooth away modern roads and canals.',

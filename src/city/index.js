@@ -66,7 +66,7 @@ function wellMeshes(wells, brick) {
   return [rings, pools];
 }
 
-const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [] });
+const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [], lamps: [] });
 
 export function buildCity({ lowPower = false } = {}) {
   const rng = createRng(2500);
@@ -220,6 +220,14 @@ export function buildCity({ lowPower = false } = {}) {
       return { ...w, x, z };
     }),
   ];
+  // imagined evening lamps in generated houses (scene coordinates)
+  const lamps = [
+    ...world.lamps,
+    ...grid.lamps.map((l) => {
+      const [x, z] = gridToScene(l.x, l.z);
+      return { x, z, y: l.y };
+    }),
+  ];
   const wellExtras = [];
   for (const cert of [CERTAINTY.excavated, CERTAINTY.inferred, CERTAINTY.imagined]) {
     const list = wells.filter((w) => w.cert === cert);
@@ -290,6 +298,7 @@ export function buildCity({ lowPower = false } = {}) {
     plan,
     covered,
     firstStreetSpan: first ? first.span : null,
+    lamps,
     // for walking: wall footprints (grid ones are in First Street's frame), wells, the pool
     obstacles: {
       world: world.walls.footprints,
