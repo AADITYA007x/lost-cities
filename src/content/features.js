@@ -73,7 +73,7 @@ export const FEATURES = {
       'Covered brick drains ran along it, with soak pits where silt could settle.',
     ],
     debated: null,
-    here: 'Its line joins the street as drawn on the DK-G and HR plans; between them it is inferred.',
+    here: 'Its line joins the street as drawn on the DK-G and HR plans; between them it is inferred. Where the automatic tracing put lines across the middle of the street (mostly drains and cover stones on the old plans), they are left out so the street stays open.',
     sources: ['mackay', 'marshall', 'jansen'],
   },
   'area-HR': {

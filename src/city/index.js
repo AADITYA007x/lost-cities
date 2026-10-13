@@ -66,7 +66,7 @@ function wellMeshes(wells, brick) {
   return [rings, pools];
 }
 
-const newBatches = () => ({ walls: new Batch(), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [] });
+const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [] });
 
 export function buildCity({ lowPower = false } = {}) {
   const rng = createRng(2500);
@@ -290,5 +290,12 @@ export function buildCity({ lowPower = false } = {}) {
     plan,
     covered,
     firstStreetSpan: first ? first.span : null,
+    // for walking: wall footprints (grid ones are in First Street's frame), wells, the pool
+    obstacles: {
+      world: world.walls.footprints,
+      grid: grid.walls.footprints,
+      wells: wells.map((w) => [w.x, w.z]),
+      pool: plan.pool,
+    },
   };
 }

@@ -29,9 +29,11 @@ class Bucket {
 
 // Collects many boxes and wedges into a few geometries: one per certainty level and tile.
 export class Batch {
-  constructor() {
+  // collect: also keep each piece's footprint (for walking collision)
+  constructor({ collect = false } = {}) {
     this.buckets = new Map();
     this.vertexCount = 0;
+    this.footprints = collect ? [] : null;
   }
 
   bucket(certainty, x, z) {
@@ -60,6 +62,10 @@ export class Batch {
     const cx = (c[0].x + c[2].x) / 2;
     const cz = (c[0].z + c[2].z) / 2;
     const b = this.bucket(certainty, cx, cz);
+    if (this.footprints) {
+      // [x0,z0, x1,z1, x2,z2, x3,z3, bottomY, topY]
+      this.footprints.push([c[0].x, c[0].z, c[1].x, c[1].z, c[2].x, c[2].z, c[3].x, c[3].z, Math.min(c[0].y, c[1].y), c[4].y]);
+    }
     const e1 = new THREE.Vector3();
     const e2 = new THREE.Vector3();
     const n = new THREE.Vector3();

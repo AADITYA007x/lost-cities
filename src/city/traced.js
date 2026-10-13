@@ -1,6 +1,40 @@
 import * as THREE from 'three';
 import { CERTAINTY } from './batch.js';
 import { makeTransform, isCalibrated } from './trace-transform.js';
+import { sceneToGrid, gridToScene, FIRST_STREET } from './layout.js';
+
+// First Street is known to be an open street. Auto-traced lines that cross its middle
+// are almost always drains, cover stones or lettering drawn on the plan, not walls,
+// so the part of a traced wall inside this core is left out.
+const STREET_CORE = 2.4; // metres either side of the centre line
+const STREET_LEN = Math.hypot(FIRST_STREET.south[0] - FIRST_STREET.north[0], FIRST_STREET.south[1] - FIRST_STREET.north[1]);
+
+// pieces [a, b] (scene points) of a segment that lie outside the street core
+function outsideStreet(a, b) {
+  const [ua, va] = sceneToGrid(a[0], a[1]);
+  const [ub, vb] = sceneToGrid(b[0], b[1]);
+  if (Math.max(va, vb) < 0 || Math.min(va, vb) > STREET_LEN) return [[a, b]];
+  // u changes linearly along the segment: find where it is inside [-core, core]
+  const du = ub - ua;
+  let t0;
+  let t1;
+  if (Math.abs(du) < 1e-6) {
+    if (Math.abs(ua) >= STREET_CORE) return [[a, b]];
+    t0 = 0;
+    t1 = 1;
+  } else {
+    const ta = (-STREET_CORE - ua) / du;
+    const tb = (STREET_CORE - ua) / du;
+    t0 = Math.max(0, Math.min(ta, tb));
+    t1 = Math.min(1, Math.max(ta, tb));
+    if (t0 >= t1) return [[a, b]];
+  }
+  const at = (t) => gridToScene(ua + du * t, va + (vb - va) * t);
+  const out = [];
+  if (t0 > 0) out.push([a, at(t0)]);
+  if (t1 < 1) out.push([at(t1), b]);
+  return out;
+}
 
 // Every JSON file saved by the plan tracer into src/data/traced/ is picked up here.
 const files = import.meta.glob('../data/traced/*.json', { eager: true, import: 'default' });
@@ -39,11 +73,11 @@ export function buildTraced(traces, groundAt, out) {
       const lowCert = wall.certainty === 'inferred' ? CERTAINTY.inferred : CERTAINTY.excavated;
       const standing = Math.min(H, Math.max(0.2, wall.preserved ?? 1.5));
 
-      for (let i = 0; i < pts.length - 1; i++) {
-        const [ax, az] = pts[i];
-        const [bx, bz] = pts[i + 1];
+      const pieces = [];
+      for (let i = 0; i < pts.length - 1; i++) pieces.push(...outsideStreet(pts[i], pts[i + 1]));
+      for (const [[ax, az], [bx, bz]] of pieces) {
         const len = Math.hypot(bx - ax, bz - az);
-        if (len < 0.05) continue;
+        if (len < 0.3) continue;
         const dx = (bx - ax) / len;
         const dz = (bz - az) / len;
         // extend each end by half the width so corners close

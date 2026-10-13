@@ -519,3 +519,113 @@ h1 {
     align-items: flex-end;
   }
 }
+
+/* ---------- walk mode ---------- */
+.walk-button {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 5;
+  font-family: var(--serif);
+  font-size: 17px;
+  padding: 7px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 178, 106, 0.55);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.walk-button:hover,
+.walk-button:focus-visible {
+  background: rgba(212, 178, 106, 0.2);
+  outline: none;
+}
+
+.minimap {
+  position: fixed;
+  top: calc(max(16px, env(safe-area-inset-top)) + 50px);
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 4;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.8s ease, visibility 0.8s;
+  pointer-events: none;
+}
+
+.minimap.on {
+  opacity: 0.92;
+  visibility: visible;
+}
+
+.walk-hint {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  margin: 0;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 18px;
+  font-style: italic;
+  color: var(--text);
+  text-align: center;
+  max-width: calc(100vw - 32px);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+
+.walk-hint.show {
+  opacity: 1;
+}
+
+.joystick {
+  position: fixed;
+  left: max(24px, env(safe-area-inset-left));
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px);
+  z-index: 5;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px solid rgba(239, 230, 216, 0.35);
+  background: rgba(20, 16, 13, 0.35);
+  display: none;
+  touch-action: none;
+}
+
+.joystick.on {
+  display: block;
+}
+
+.joystick .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: rgba(212, 178, 106, 0.55);
+  border: 1px solid rgba(239, 230, 216, 0.6);
+}
+
+@media (max-width: 640px) {
+  .minimap {
+    width: 110px;
+    height: 110px;
+  }
+
+  .walk-button {
+    font-size: 15px;
+    padding: 6px 16px;
+  }
+}

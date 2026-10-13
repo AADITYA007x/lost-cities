@@ -8,6 +8,10 @@ import { createLabels, createNotePanel } from './ui.js';
 import { LANDSCAPE_NOTE, PLACE_LABELS } from './content/landscape.js';
 import { createCertaintyLayer } from './certainty.js';
 import { createInfo } from './info.js';
+import { createWalk } from './walk.js';
+import { buildCollision } from './collision.js';
+import { createMinimap } from './minimap.js';
+import { FIRST_STREET, pointInPolygon } from './city/layout.js';
 
 const params = new URLSearchParams(location.search);
 const skipIntro = params.has('skipintro');
@@ -32,7 +36,8 @@ const haze = new THREE.Color('#dcc0a0');
 scene.fog = new THREE.FogExp2(haze, 0.00016);
 
 const portrait = () => window.innerWidth < window.innerHeight;
-const fovFor = () => (portrait() ? 60 : 40);
+let walking = false;
+const fovFor = () => (walking ? (portrait() ? 72 : 62) : portrait() ? 60 : 40);
 const camera = new THREE.PerspectiveCamera(fovFor(), window.innerWidth / window.innerHeight, 1, 40000);
 
 // ---------- light: late afternoon sun from the west-south-west ----------
@@ -93,6 +98,10 @@ let water = null;
 let labels = null;
 let limit = () => {};
 let home = null;
+let walk = null;
+let city = null;
+let collision = null;
+const minimap = createMinimap(document.getElementById('minimap'));
 
 async function init() {
   const data = await loadTerrainData();
@@ -104,7 +113,7 @@ async function init() {
   scene.add(water);
   scene.add(createHorizonGround(terrain.edgeLevel));
 
-  const city = buildCity({ lowPower });
+  city = buildCity({ lowPower });
   scene.add(city.group);
   const groundAt = (x, z) => Math.max(terrain.heightAt(x, z), city.platformHeightAt(x, z));
 
@@ -149,7 +158,11 @@ async function init() {
   ]);
 
   limit = createCameraLimits(camera, controls, groundAt, { clearance: 8 });
-  world = { terrain, siteCenter };
+  world = { terrain, siteCenter, groundAt };
+
+  const onPlatform = (x, z) => pointInPolygon(x, z, city.rects.lowerTown.outline) || pointInPolygon(x, z, city.rects.citadel.outline);
+  walk = createWalk({ camera, canvas, groundAt, onPlatform, joystickEl: document.getElementById('joystick') });
+  world.onPlatform = onPlatform;
 
   // test views: ?view=bath or ?view=street (start there, no intro)
   const presets = {
@@ -167,6 +180,14 @@ async function init() {
 
   if (params.get('mode') === 'evidence') {
     setTimeout(() => certaintyBox.querySelector('[data-mode=evidence]').click(), 300);
+  }
+
+  if (params.get('view') === 'walk') {
+    camera.position.copy(home.position);
+    controls.target.copy(home.target);
+    begin('off', true);
+    setTimeout(() => enterWalk({ instant: true, firstStreet: true }), 50);
+    return;
   }
 
   if (skipIntro || preset) {
@@ -200,6 +221,7 @@ function begin(sound, instant = false) {
     certaintyBox.hidden = false;
     info.enable(true);
     labels.show(true);
+    walkButton.hidden = false;
   };
 
   if (instant) {
@@ -230,10 +252,129 @@ certaintyBox.addEventListener('click', (e) => {
   });
 });
 
+// ---------- walk mode ----------
+const walkButton = document.getElementById('walk-button');
+const walkHint = document.getElementById('walk-hint');
+const minimapEl = document.getElementById('minimap');
+const mapScale = { left: -820, right: 820, top: 820, bottom: -820, normalBias: 0.35 };
+
+// a point on First Street in the HR area, looking north up the street
+function firstStreetStart() {
+  const [nx, nz] = FIRST_STREET.north;
+  const [sx, sz] = FIRST_STREET.south;
+  const t = 0.83;
+  const x = nx + (sx - nx) * t;
+  const z = nz + (sz - nz) * t;
+  return { x, z, yaw: Math.atan2(-(nx - sx), -(nz - sz)) };
+}
+
+function ensureCollision() {
+  if (collision) return;
+  const t0 = performance.now();
+  collision = buildCollision(city.obstacles, city.platformHeightAt);
+  if (params.has('debug')) {
+    window.__walk = { walk, collision, ms: performance.now() - t0 };
+  }
+  walk.setCollision(collision);
+  minimap.build(collision);
+}
+
+function setShadowsAround(x, z, near) {
+  const cam = sun.shadow.camera;
+  const r = near ? 70 : mapScale.right;
+  Object.assign(cam, { left: -r, right: r, top: r, bottom: -r });
+  cam.updateProjectionMatrix();
+  sun.shadow.normalBias = near ? 0.04 : mapScale.normalBias;
+  sun.target.position.set(x, world.groundAt(x, z), z);
+  sun.position.copy(sun.target.position).addScaledVector(sunDirection, 3500);
+}
+
+function enterWalk({ instant = false, firstStreet = false } = {}) {
+  if (walking || !walk) return;
+  walkHint.textContent = 'Preparing the streets\u2026';
+  walkHint.classList.add('show');
+  // let the message paint before the (short) collision build
+  setTimeout(() => {
+    ensureCollision();
+    let start = null;
+    if (!firstStreet) {
+      const t = controls.target;
+      const spot = collision.nearestFree(t.x, t.z, world.onPlatform, 60);
+      if (spot) {
+        const yaw = Math.atan2(-(t.x - camera.position.x), -(t.z - camera.position.z));
+        start = { x: spot[0], z: spot[1], yaw };
+      }
+    }
+    if (!start) {
+      const s = firstStreetStart();
+      const spot = collision.nearestFree(s.x, s.z, world.onPlatform, 30) || [s.x, s.z];
+      start = { x: spot[0], z: spot[1], yaw: s.yaw };
+    }
+    const pose = walk.start(start.x, start.z, start.yaw);
+    walking = true;
+    controls.enabled = false;
+    labels.show(false);
+    info.close();
+    walkButton.textContent = 'Fly';
+    walkButton.setAttribute('aria-label', 'Leave walk mode and fly');
+    const go = () => {
+      // close-up camera and crisp shadows only once we stand in the street
+      camera.near = 0.1;
+      camera.far = 9000;
+      onResize();
+      setShadowsAround(start.x, start.z, true);
+      walk.enable(true);
+      minimapEl.classList.add('on');
+      walkHint.textContent = isTouch
+        ? 'Use the circle to walk \u00b7 drag anywhere to look'
+        : 'W A S D or arrow keys to walk \u00b7 drag to look \u00b7 Shift to hurry';
+      walkHint.classList.add('show');
+      clearTimeout(enterWalk.t);
+      enterWalk.t = setTimeout(() => walkHint.classList.remove('show'), 6000);
+    };
+    if (instant) {
+      camera.position.copy(pose.position);
+      camera.lookAt(pose.target);
+      go();
+    } else {
+      walkHint.classList.remove('show');
+      flight.to({ position: pose.position, target: pose.target, duration: 4 }, go);
+    }
+  }, 30);
+}
+
+function exitWalk() {
+  if (!walking) return;
+  walk.enable(false);
+  walking = false;
+  minimapEl.classList.remove('on');
+  walkHint.classList.remove('show');
+  const p = walk.position.clone();
+  const back = new THREE.Vector3(Math.sin(walk.yaw), 0, Math.cos(walk.yaw)).multiplyScalar(90);
+  const target = new THREE.Vector3(p.x, world.groundAt(p.x, p.z), p.z);
+  camera.near = 1;
+  camera.far = 40000;
+  onResize();
+  setShadowsAround(world.siteCenter.x, world.siteCenter.z, false);
+  walkButton.textContent = 'Walk';
+  walkButton.setAttribute('aria-label', 'Walk the streets at eye height');
+  // start the flight from where the walker was looking, so the view turns smoothly
+  controls.target.copy(walk.pose().target);
+  flight.to({ position: target.clone().add(back).add(new THREE.Vector3(0, 80, 0)), target, duration: 3.5 }, () => {
+    controls.enabled = true;
+    labels.show(true);
+  });
+}
+
+walkButton.addEventListener('click', () => (walking ? exitWalk() : enterWalk()));
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && walking && !document.querySelector('.info-panel.open')) exitWalk();
+});
+
 // double-click / double-tap: glide back to the home view
 let lastTap = 0;
 canvas.addEventListener('pointerup', (e) => {
-  if (!controls.enabled) return;
+  if (!controls.enabled || walking) return;
   const now = performance.now();
   if (now - lastTap < 320 && e.isPrimary) {
     controls.enabled = false;
@@ -264,6 +405,12 @@ renderer.setAnimationLoop((now) => {
 
   if (flight.flying) {
     flight.update(dt);
+  } else if (walking) {
+    walk.update(dt);
+    const p = walk.position;
+    minimap.draw(p.x, p.z, walk.yaw);
+    // keep crisp shadows around the walker
+    if (Math.hypot(sun.target.position.x - p.x, sun.target.position.z - p.z) > 20) setShadowsAround(p.x, p.z, true);
   } else {
     controls.update();
     if (world) limit();
