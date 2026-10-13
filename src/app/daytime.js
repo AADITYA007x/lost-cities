@@ -13,9 +13,11 @@ export function createDaytime(app) {
   const clampHour = (h) => (Number.isFinite(h) ? ((h % 24) + 24) % 24 : 15.5);
   const state = {
     hour: clampHour(Number(params.get('time') ?? 15.5)),
-    season: SEASONS[params.get('season')] ? params.get('season') : 'cool',
+    season: params.has('rain') ? 'monsoon' : SEASONS[params.get('season')] ? params.get('season') : 'cool',
     playing: false,
+    rain: params.has('rain'),
   };
+  let rainLevel = state.rain ? 1 : 0;
 
   const button = document.getElementById('time-button');
   let lamps = null;
@@ -56,7 +58,7 @@ export function createDaytime(app) {
   function apply() {
     const day = SEASONS[state.season].day;
     sunDirectionAt(day, state.hour, sunDirection);
-    const L = lightAt(sunDirection, state.season);
+    const L = lightAt(sunDirection, state.season, rainLevel);
     light = L;
     // below the horizon the light comes from the sky alone
     sun.color.copy(L.sun);
@@ -99,15 +101,30 @@ export function createDaytime(app) {
   return {
     state,
     apply,
+    get rainLevel() {
+      return rainLevel;
+    },
+    get light() {
+      return light;
+    },
     show() {
       button.hidden = false;
     },
     update(dt, t) {
+      let changed = false;
       if (state.playing && app.world) {
         // a whole day in about two minutes
         state.hour = (state.hour + dt * 0.2) % 24;
-        apply();
+        changed = true;
       }
+      // rain comes on over about ten seconds and eases off more slowly
+      const target = state.rain ? 1 : 0;
+      if (Math.abs(target - rainLevel) > 0.001) {
+        rainLevel += (target - rainLevel) * Math.min(1, dt * (state.rain ? 0.3 : 0.15));
+        if (Math.abs(target - rainLevel) < 0.002) rainLevel = target;
+        changed = true;
+      }
+      if (changed) apply();
       if (lamps && light) {
         lamps.update({ time: t, glow: light.glow, fog: scene.fog.density, scale: stage.pixelsPerMetre() });
       }

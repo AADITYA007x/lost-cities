@@ -28,12 +28,14 @@ export function createTimeControl({ button, panel, state, onChange }) {
         .map(([k, s]) => `<button type="button" role="radio" data-season="${k}" aria-checked="false">${s.label}<small>${s.note}</small></button>`)
         .join('')}
     </div>
-    <p class="time-note">Sun times are for the site itself, by the sun, not the clock. The night lamps are imagined.</p>
+    <button type="button" class="time-rain" aria-pressed="false">Monsoon rain</button>
+    <p class="time-note">Sun times are for the site itself, by the sun, not the clock. The night lamps are imagined; the way water runs in each drain is inferred.</p>
   `;
   const slider = panel.querySelector('input');
   const now = panel.querySelector('.time-now');
   const play = panel.querySelector('.time-play');
   const seasonButtons = [...panel.querySelectorAll('[data-season]')];
+  const rain = panel.querySelector('.time-rain');
 
   function open(on) {
     panel.classList.toggle('open', on);
@@ -56,9 +58,16 @@ export function createTimeControl({ button, panel, state, onChange }) {
   for (const b of seasonButtons) {
     b.addEventListener('click', () => {
       state.season = b.dataset.season;
+      // heavy rain belongs to the monsoon; other seasons are dry
+      if (state.season !== 'monsoon') state.rain = false;
       onChange();
     });
   }
+  rain.addEventListener('click', () => {
+    state.rain = !state.rain;
+    if (state.rain) state.season = 'monsoon';
+    onChange();
+  });
 
   return {
     open,
@@ -71,6 +80,8 @@ export function createTimeControl({ button, panel, state, onChange }) {
       button.setAttribute('aria-label', `Time and season: ${phrase}, ${SEASONS[state.season].label}`);
       play.textContent = state.playing ? 'Pause' : 'Let the day pass';
       play.setAttribute('aria-pressed', String(state.playing));
+      rain.textContent = state.rain ? 'Stop the rain' : 'Monsoon rain';
+      rain.setAttribute('aria-pressed', String(state.rain));
       for (const b of seasonButtons) {
         const on = b.dataset.season === state.season;
         b.classList.toggle('on', on);

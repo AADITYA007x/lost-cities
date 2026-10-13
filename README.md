@@ -9,6 +9,7 @@ An interactive 3D reconstruction of Mohenjo-daro around 2500 BCE that shows how 
 - Double-click (or double-tap) the landscape to glide back to the starting view.
 - Walk: press **Walk** (top left). WASD or arrow keys, drag to look, Shift to hurry; on a phone, the circle bottom left. Esc or **Fly** to leave. `?view=walk` starts on First Street.
 - Time and season: the button top right. For testing, add `&time=21` (sun time, 0–24) and `&season=cool|hot|monsoon|after` to the URL.
+- Rain: "Monsoon rain" in the time panel, or add `&rain` to the URL.
 
 ## Terrain
 `public/terrain/mohenjo-daro.bin` is made from the Copernicus DEM tile by `tools/make-terrain.py` (Python, only needed if the terrain is ever rebuilt). Keep the raw tile in `data-raw/` (git-ignored).

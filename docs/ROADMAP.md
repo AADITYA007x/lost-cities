@@ -11,7 +11,7 @@ Each milestone runs, is tested at eye height and on a phone, and is committed be
 | 3 | **Certainty layer + info panel** | One control: "alive" / "evidence". Click any feature: what it was, what we know, how sure, sources. |
 | 4 | **Walk mode** | First person at eye height, WASD + touch, collision, minimap. |
 | 5 | **Time of day and seasons** | Sun path calculated for the site in four seasons, dawn to night, stars, warm night lamps (imagined). One control. |
-| 6 | **Monsoon** | Rain and water flowing through the covered drains toward the river. |
+| 6 | **Monsoon** | Rain, wet streets and walls, water running along the street drains, the river rising and turning silty in the flood season. |
 | 7 | **Life in the city** | Simple figures doing crafts, clickable craft notes. |
 | 8 | **City through time** | Slider: founding → height → decline → burial → excavation → today; then-and-now split. |
 | 9 | **Indus script** | Signs and seals explorer, sign frequencies, theories without claiming a decipherment. |

@@ -55,6 +55,37 @@ function addWorldVaryings(shader) {
     );
 }
 
+// ---------- rain ----------
+// One shared value for how wet the city is (0 dry, 1 soaked); weather.js sets it.
+// Wet brick and earth turn darker and a little glossy; flat ground gathers puddles.
+export const WET = { value: 0 };
+
+function addWetness(shader, { puddles }) {
+  shader.uniforms.uWet = WET;
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>
+      uniform float uWet;
+      float mdPuddle;`)
+    .replace(
+      '#include <roughnessmap_fragment>',
+      `#include <roughnessmap_fragment>
+      {
+        float up = smoothstep(0.6, 0.95, normalize(vMdNormal).y);
+        ${
+          puddles
+            ? 'mdPuddle = smoothstep(0.6, 0.68, mdFbm(vMdPos.xz * 0.8 + 5.0)) * up * smoothstep(0.5, 1.0, uWet) * (1.0 - smoothstep(0.3, 1.5, length(fwidth(vMdPos.xz * 0.8))));'
+            : 'mdPuddle = 0.0;'
+        }
+        roughnessFactor = mix(roughnessFactor, mix(0.6, 0.12, mdPuddle), uWet * (0.5 + 0.5 * up));
+      }`
+    )
+    .replace(
+      '#include <emissivemap_fragment>',
+      `diffuseColor.rgb *= 1.0 - uWet * 0.28 - mdPuddle * 0.14;
+      #include <emissivemap_fragment>`
+    );
+}
+
 // ---------- certainty layer ----------
 // Evidence variants of a material: "ghost" (inferred: translucent with soft edges) and
 // "sketch" (imagined: faint fill, drawn edges). uMix runs from 0 (the living city)
@@ -198,10 +229,11 @@ export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUnif
           diffuseColor.rgb = mix(mortar, tone, brickMask);
         }`
       );
+    addWetness(shader, { puddles: false });
     addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => `md-brick-v2-${evidence || 'solid'}`;
+  material.customProgramCacheKey = () => `md-brick-v3-${evidence || 'solid'}`;
   return material;
 }
 
@@ -243,9 +275,10 @@ export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUnif
           diffuseColor.rgb = c;
         }`
       );
+    addWetness(shader, { puddles: true });
     addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => `md-earth-v1-${evidence || 'solid'}`;
+  material.customProgramCacheKey = () => `md-earth-v2-${evidence || 'solid'}`;
   return material;
 }

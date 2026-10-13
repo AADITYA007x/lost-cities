@@ -50,7 +50,7 @@ const AIR = {
 
 const tmp = new THREE.Color();
 
-export function lightAt(sunDir, season) {
+export function lightAt(sunDir, season, rain = 0) {
   const el = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(sunDir.y, -1, 1)));
   let i = 0;
   while (i < KEYS.length - 2 && el > KEYS[i + 1].el) i++;
@@ -91,6 +91,17 @@ export function lightAt(sunDir, season) {
     out.stars *= 0.35;
   }
   out.fogDensity = 0.00016 * air.density;
+  if (rain > 0) {
+    // rain clouds: a grey sky, little direct sun, thick air
+    const cloud = new THREE.Color('#8f9391').multiplyScalar(0.12 + 0.88 * day);
+    out.top.lerp(cloud, 0.75 * rain);
+    out.mid.lerp(cloud, 0.65 * rain);
+    out.low.lerp(cloud.clone().multiplyScalar(1.05), 0.6 * rain);
+    out.hemiSky.lerp(tmp.set('#c9cdca'), 0.35 * rain * day);
+    out.sunI *= 1 - 0.85 * rain;
+    out.stars *= 1 - rain;
+    out.fogDensity *= 1 + 1.3 * rain;
+  }
   return out;
 }
 

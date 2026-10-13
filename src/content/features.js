@@ -232,7 +232,7 @@ export const FEATURES = {
       'Soak pits along the way caught silt and could be cleaned out.',
     ],
     debated: null,
-    here: 'Along First Street the drain is known from the plans; along the generated streets it is imagined.',
+    here: 'Along First Street the drain is known from the plans; along the generated streets it is imagined. In the monsoon view, running water is drawn along the drain line so you can see it; in reality it ran under the covers. Which way it ran here is inferred: toward the end of the street nearer the river.',
     sources: ['jansen', 'kenoyer'],
   },
   well: {

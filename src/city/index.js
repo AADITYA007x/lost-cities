@@ -129,12 +129,20 @@ export function buildCity({ lowPower = false } = {}) {
     return lo < hi ? [lo + 3, hi - 3] : null;
   };
   const streetSpans = [];
+  const drains = []; // centre lines in scene coordinates, for water in the monsoon
   for (const s of LOWER_TOWN_STREETS) {
     const span = spanAlong(s.axis, s.at);
     if (!span) continue;
     streetSpans.push({ ...s, span });
     const cert = s.known ? CERTAINTY.inferred : CERTAINTY.imagined;
     const off = s.at + s.width / 2 - 1.1;
+    const mid = off + 0.3;
+    drains.push({
+      a: s.axis === 'ns' ? gridToScene(mid, span[0]) : gridToScene(span[0], mid),
+      b: s.axis === 'ns' ? gridToScene(mid, span[1]) : gridToScene(span[1], mid),
+      y: lower.y + 0.12,
+      known: Boolean(s.known),
+    });
     if (s.axis === 'ns') grid.paving.box(off, lower.y, span[0], off + 0.6, lower.y + 0.12, span[1], cert);
     else grid.paving.box(span[0], lower.y, off, span[1], lower.y + 0.12, off + 0.6, cert);
   }
@@ -299,6 +307,7 @@ export function buildCity({ lowPower = false } = {}) {
     covered,
     firstStreetSpan: first ? first.span : null,
     lamps,
+    drains,
     // for walking: wall footprints (grid ones are in First Street's frame), wells, the pool
     obstacles: {
       world: world.walls.footprints,

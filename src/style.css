@@ -740,7 +740,8 @@ h1 {
   margin-top: 2px;
 }
 
-.time-play {
+.time-play,
+.time-rain {
   margin-top: 12px;
   width: 100%;
   font-family: var(--serif);
@@ -753,7 +754,8 @@ h1 {
   cursor: pointer;
 }
 
-.time-play[aria-pressed='true'] {
+.time-play[aria-pressed='true'],
+.time-rain[aria-pressed='true'] {
   border-color: rgba(212, 178, 106, 0.6);
   background: rgba(212, 178, 106, 0.16);
 }

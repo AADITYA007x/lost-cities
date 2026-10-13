@@ -10,6 +10,7 @@ import { pointInPolygon } from './city/layout.js';
 import { createStage } from './app/stage.js';
 import { createDaytime } from './app/daytime.js';
 import { createWalkMode } from './app/walk-mode.js';
+import { createWeather } from './weather.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -35,6 +36,7 @@ const app = {
 const daytime = createDaytime(app);
 const walkMode = createWalkMode(app);
 app.ensureCollision = walkMode.ensureCollision;
+if (params.has('debug')) window.__app = app;
 
 // ---------- UI ----------
 const opening = document.getElementById('opening');
@@ -52,6 +54,7 @@ function savePreference(sound) {
 }
 
 let certainty = null;
+let weather = null;
 let limit = () => {};
 
 // ---------- world ----------
@@ -69,6 +72,7 @@ async function init() {
   const city = buildCity({ lowPower });
   scene.add(city.group);
   app.city = city;
+  weather = createWeather({ scene, camera, city, water, riverPoint: terrain.places.river, lowPower });
   const groundAt = (x, z) => Math.max(terrain.heightAt(x, z), city.platformHeightAt(x, z));
   const onPlatform = (x, z) => pointInPolygon(x, z, city.rects.lowerTown.outline) || pointInPolygon(x, z, city.rects.citadel.outline);
 
@@ -115,6 +119,7 @@ async function init() {
   app.world = { terrain, siteCenter, groundAt, onPlatform };
   walkMode.setup();
   daytime.apply();
+  weather.settle({ rain: daytime.rainLevel, monsoon: daytime.state.season === 'monsoon' });
 
   // test views: ?view=bath, ?view=street, ?view=hr ... (start there, no intro)
   const presets = {
@@ -235,6 +240,12 @@ stage.renderer.setAnimationLoop((now) => {
   }
 
   daytime.update(dt, t);
+  const light = daytime.light;
+  weather?.update(dt, t, {
+    rain: daytime.rainLevel,
+    monsoon: daytime.state.season === 'monsoon',
+    light: light ? THREE.MathUtils.clamp((light.elevation + 6) / 20, 0, 1) : 1,
+  });
   stage.sky.position.copy(camera.position);
   if (app.water) app.water.material.uniforms.uTime.value = t;
   app.labels?.update(camera);
