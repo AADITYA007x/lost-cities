@@ -61,4 +61,12 @@ Not legal advice. This is a working summary so we make careful choices; when in 
   - **Plate I, site plan.** Lined up with the elevation data using the stupa as anchor and the scale bar (1.408 m per scan pixel). The mounds on the plan match the elevation data to within about 15 m. Used for: mound outlines, excavated areas, First Street, the Great Bath position.
   - **Plate XVIII, DK-G southern portion, Intermediate I period.** Scale from its 100 ft survey grid (0.1555 m per px); placed by matching its outline to the site plan; First Street lands within about 1 m of the site plan's line. Walls extracted automatically (solid black only), to be reviewed by hand.
   - Plates VI, VII (SD area), XIII (DK-G northern portion) and XVI, XVII, XIX, XX (DK-G south at other levels) are not used yet. The other levels of DK-G are good material for the "city through time" slider.
-- **Marshall 1931, Vol. III (plates)**: not available yet (the NVLI site did not respond). Needed for HR, VS and the citadel (SD, L).
+- **Marshall 1931, Vol. III (plates)**, Archive.org scan in.gov.ignca.48270 (ASI copy). Fold-out plans scanned at 1,150-3,050 px across. Traced so far:
+  - **XXXIX, HR area** (0.0622 m/px from its scale bar; placed by outline matching).
+  - **LIII, VS area A and B** (0.0622 m/px; outline matching).
+  - **XXX, L area** (0.1045 m/px; outline matching).
+  - **XXII, Great Bath** (0.0602 m/px). Outline matching was ambiguous inside the citadel, so the pool centre was put on the bath marked on the site plan. Only walls Marshall drew as "original structures" (solid black) are used; later additions and conjectural parts are left out.
+  - Marshall's plans show walls of several building periods together (unlike Mackay's level-by-level plans of DK-G). The app says so.
+  - The HR scan is slightly distorted (east-west walls slant differently across the sheet), so the auto-tracer finds walls as centre lines at any angle instead of upright boxes.
+  - Not yet used: XVI and XVIII (stupa area), XXVII (Southern Buildings), LVII (VS north-west), LXI, LXII, LXIV, LXV (DK areas A, B, C, E and M).
+- Every plate's scale, placement and tracing settings are in `tools/plates.json`.

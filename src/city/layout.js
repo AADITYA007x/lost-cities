@@ -65,9 +65,10 @@ export const EXCAVATED_AREAS = [
   { id: 'L', x0: -509.7, x1: -376.0, z0: 6.9, z1: 140.6 },
 ];
 
-// First Street: one straight street that runs through DK-G, VS and HR on the site plan.
-// Its width (about 7 m) is measured on Mackay Plate XVIII.
-export const FIRST_STREET = { north: [46.4, -401.5], south: [-45.1, 351.8], width: 7 };
+// First Street: one straight street through DK-G, VS and HR. Its line runs through the
+// street as drawn on the two traced plans at either end (Mackay Plate XVIII in DK-G,
+// Marshall Plate XXXIX in HR). Its width (about 7 m) is measured on Plate XVIII.
+export const FIRST_STREET = { north: [50.5, -401.5], south: [-58.4, 351.8], width: 7 };
 
 // The lower town's houses are generated in a frame aligned with First Street
 // (about 7 degrees off north), so streets and houses follow the city's own grid.

@@ -1,26 +1,25 @@
-// Calibration already worked out for known plates, so they can be traced without
-// setting the scale bar, north arrow and anchor by hand.
-//
-// How Plate XVIII was placed:
-//  - scale from its own survey grid (100 ft squares, about 196 px apart) and scale bar: 0.1555 m per px
-//  - north is straight up on the plate
-//  - position: its outline matched by image correlation to the red "G Section (Southern Portion)"
-//    on Mackay's site plan (Plate I), which is itself lined up with the elevation data
-//  - check: First Street on the plate lands within about 1 m of First Street on the site plan
-// Expected error: a few metres within the plate, about 15 m for the plate as a whole.
+// Calibration already worked out for known plates, read from tools/plates.json
+// (the same file the auto-tracer uses), so a known plate can be traced without
+// setting the scale bar, north arrow and anchor by hand. See plates.json for how
+// each plate was scaled and placed.
 
-export const PLATE_PRESETS = {
-  'mackay-xviii': {
-    label: 'Mackay 1938 · Plate XVIII · DK-G south, Intermediate I',
-    file: 'mackay-plate-XVIII-DK-G-south-intermediate-I.jpg',
-    source: 'Mackay 1938',
-    plate: 'XVIII',
-    page: '50',
-    area: 'DK-G',
-    calibration: {
-      mPerPx: 0.1555,
-      north: [[680, 704], [680, 604]],
-      anchor: { px: [680, 604], scene: [-98.5, -244.2] },
+import config from '../plates.json';
+
+export const PLATE_PRESETS = Object.fromEntries(
+  config.plates.map((p) => [
+    p.id,
+    {
+      label: p.label,
+      file: p.file.split('/').pop(),
+      source: p.source,
+      plate: p.plate,
+      page: p.page,
+      area: p.area,
+      calibration: {
+        mPerPx: p.mPerPx,
+        north: [[p.anchorPx[0], p.anchorPx[1] + 100], [p.anchorPx[0], p.anchorPx[1]]],
+        anchor: { px: [...p.anchorPx], scene: [...p.anchorScene] },
+      },
     },
-  },
-};
+  ])
+);

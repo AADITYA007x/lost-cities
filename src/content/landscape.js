@@ -5,23 +5,23 @@ export const LANDSCAPE_NOTE = {
   items: [
     {
       level: 'excavated',
-      label: 'From real evidence',
-      text: 'The outlines of the two mounds, the positions of the excavated areas and the line of First Street follow Mackay\u2019s 1938 site plan, which matches the satellite elevation data to within about 15 m. In the DK-G area, north-west of the lower town, the walls come straight from Mackay\u2019s plan of one building level (Plate XVIII, \u201cIntermediate I\u201d). The Great Bath follows its excavated size: a pool about 12 \u00d7 7 m and 2.4 m deep, with stairs at both ends.',
+      label: 'From the excavation plans',
+      text: 'The walls in the five areas the excavators dug most fully come from their published plans: HR, VS and L, and the buildings round the Great Bath (Marshall 1931), and DK-G (Mackay 1938). Each plan was scaled from its own scale bar and placed by matching its outline to Mackay\u2019s site plan, which lines up with the satellite elevation data to within about 15 m. The Great Bath\u2019s pool is about 12 \u00d7 7 m and 2.4 m deep.',
     },
     {
-      level: 'inferred',
-      label: 'Generated from rules',
-      text: 'Everywhere else the houses are generated from what excavated houses share: thick brick walls, rooms around a courtyard, doors on side lanes, wells in many courtyards. Inside the other excavated areas (HR, VS, the rest of DK, and SD and L on the citadel), whose plans are not traced yet, they stand in for real houses. Outside them the ground has not been excavated, and they are a reasonable guess.',
+      level: 'simplified',
+      label: 'Several periods at once',
+      text: 'The city was rebuilt many times over several centuries. Mackay drew DK-G one building level at a time; we show his \u201cIntermediate I\u201d level. Marshall\u2019s plans of HR, VS and L show walls of different periods together, so some walls there never stood at the same time. For the Great Bath we use only what Marshall marked as original structures. \u201cAround 2500 BCE\u201d is an approximation.',
     },
     {
       level: 'inferred',
       label: 'Walls from the plan',
-      text: 'A plan shows where walls stand, not how tall they are. Traced walls are shown a full storey high: the lower part is marked as excavated, the rest as inferred. Only walls drawn solid black on the plan are included so far; Mackay drew walls of other building levels in grey, and some thin walls may be missing.',
+      text: 'A plan shows where walls stand, not how tall they are. Traced walls are shown a full storey high: the lower part is marked excavated, the rest inferred. The walls were picked out from the plan scans automatically and are being checked by hand; thin walls, wells and drains are still missing in places.',
     },
     {
-      level: 'simplified',
-      label: 'Which moment?',
-      text: 'Mohenjo-daro was rebuilt many times over several centuries, and the excavators recorded it in levels. The DK-G walls belong to Mackay\u2019s \u201cIntermediate I\u201d level; how exactly his levels line up with calendar dates is uncertain. \u201cAround 2500 BCE\u201d is an approximation.',
+      level: 'inferred',
+      label: 'Generated from rules',
+      text: 'Everywhere else the houses are generated from what excavated houses share: thick brick walls, rooms around a courtyard, doors on side lanes, wells in many courtyards. Most of the city has never been excavated, so these are a reasonable guess.',
     },
     {
       level: 'inferred',
@@ -71,5 +71,5 @@ export const PLACE_LABELS = {
   greatBath: 'Great Bath',
   greatHall: 'Great Hall (“granary”)',
   firstStreet: 'First Street',
-  traced: 'DK-G \u00b7 walls from Mackay\u2019s plan',
+  traced: 'walls from the excavation plan',
 };

@@ -122,7 +122,13 @@ async function init() {
     { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900 },
     { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500 },
     { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500 },
-    ...(f.traced ? [{ text: PLACE_LABELS.traced, position: f.traced, lift: 10, near: 0, far: 1100 }] : []),
+    ...Object.entries(f.tracedAreas).map(([area, p]) => ({
+      text: `${area} \u00b7 walls from the excavation plan`,
+      position: p,
+      lift: 10,
+      near: 0,
+      far: 1100,
+    })),
   ]);
 
   limit = createCameraLimits(camera, controls, groundAt, { clearance: 8 });
@@ -132,6 +138,12 @@ async function init() {
   const presets = {
     bath: { target: f.greatBath.clone().setY(citadelTop(f)), offset: new THREE.Vector3(70, 65, 110) },
     traced: f.traced ? { target: f.traced.clone(), offset: new THREE.Vector3(30, 45, 60) } : null,
+    ...Object.fromEntries(
+      Object.entries(f.tracedAreas).map(([area, p]) => [
+        area.toLowerCase().replace(/[^a-z]/g, ''),
+        { target: p.clone(), offset: new THREE.Vector3(25, 40, 55) },
+      ])
+    ),
     street: { target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 120)), offset: new THREE.Vector3(4, 24, 75) },
   };
   const preset = presets[params.get('view')];

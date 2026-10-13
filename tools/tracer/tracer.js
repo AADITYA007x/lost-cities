@@ -19,6 +19,7 @@ const COLORS = {
 };
 
 const state = {
+  extraMeta: null,
   image: null,
   imageName: '',
   view: { x: 0, y: 0, scale: 1 },
@@ -416,11 +417,14 @@ window.addEventListener('keyup', (e) => {
 // ---------- files ----------
 function meta() {
   return {
+    ...(state.extraMeta || {}),
     source: $('source').value,
     plate: $('plate').value,
     page: $('page').value,
     area: $('area').value,
     image: state.imageName,
+    // saved from the tracer means a person has checked it; the auto-tracer will not overwrite it
+    reviewed: true,
   };
 }
 
@@ -445,6 +449,7 @@ function toJSON() {
 
 function fromJSON(data) {
   const m = data.meta || {};
+  state.extraMeta = { ...m };
   $('source').value = m.source || 'Marshall 1931';
   $('plate').value = m.plate || '';
   $('page').value = m.page || '';

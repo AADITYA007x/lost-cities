@@ -149,7 +149,8 @@ export function buildCity({ lowPower = false } = {}) {
   }
 
   // ---------- citadel ----------
-  const plan = planCitadel(citadel);
+  const bathTraced = traces.some(({ data }) => data.meta?.area === 'SD' && /XXII/.test(data.meta?.plate || ''));
+  const plan = planCitadel(citadel, { bathTraced });
   buildCitadel(citadel, plan, rng, world, { detail, covered });
   // a ramp from the citadel east toward the lower town (imagined)
   const rz = plan.bath.z1 + 20;
@@ -228,6 +229,13 @@ export function buildCity({ lowPower = false } = {}) {
     citadel: new THREE.Vector3(ccx, citadel.y, ccz),
     lowerTown: new THREE.Vector3(lcx, lower.y, lcz),
     traced: tracedCenter,
+    tracedAreas: Object.fromEntries(
+      covered.map((c) => {
+        const x = (c.x0 + c.x1) / 2;
+        const z = (c.z0 + c.z1) / 2;
+        return [c.area, new THREE.Vector3(x, Math.max(0, platformHeightAt(x, z)), z)];
+      })
+    ),
   };
 
   const stats = {

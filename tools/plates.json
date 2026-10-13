@@ -1,0 +1,217 @@
+{
+  "_about": "Calibration of each traced plate: scene x = anchorScene[0] + (px - anchorPx[0]) * mPerPx, z likewise (north is up on every plate listed). Positions come from matching each plate's outline to Mackay 1938 Plate I (site plan), which is lined up with the Copernicus elevation data. The plate scans live in data-raw/ (not committed).",
+  "plates": [
+    {
+      "id": "mackay-xviii",
+      "label": "Mackay 1938 · Plate XVIII · DK-G south, Intermediate I",
+      "file": "mackay-1938/mackay-plate-XVIII-DK-G-south-intermediate-I.jpg",
+      "out": "mackay-DK-G-plate-XVIII.json",
+      "source": "Mackay 1938",
+      "plate": "XVIII",
+      "page": "50",
+      "area": "DK-G",
+      "level": "Intermediate I",
+      "mPerPx": 0.1555,
+      "scaleFrom": "100 ft survey grid (about 196 px) and scale bar",
+      "anchorPx": [
+        680,
+        604
+      ],
+      "anchorScene": [
+        -98.5,
+        -244.2
+      ],
+      "placedBy": "outline matched to the site plan; First Street within about 1 m of the site plan",
+      "dark": 95,
+      "minThick": 3,
+      "glyphs": 0,
+      "method": "lines",
+      "exclude": [
+        [
+          495,
+          610,
+          655,
+          790
+        ],
+        [
+          505,
+          460,
+          640,
+          580
+        ],
+        [
+          1450,
+          0,
+          1649,
+          40
+        ]
+      ]
+    },
+    {
+      "id": "marshall-xxxix",
+      "label": "Marshall 1931 · Plate XXXIX · HR area, A and B sections",
+      "file": "marshall-1931/marshall-plate-XXXIX-HR-A-B.jpg",
+      "out": "marshall-HR-plate-XXXIX.json",
+      "source": "Marshall 1931",
+      "plate": "XXXIX",
+      "page": "57",
+      "area": "HR",
+      "level": "all levels as excavated, 1925-27",
+      "mPerPx": 0.0622,
+      "scaleFrom": "scale bar, 10 ft = 49 px",
+      "anchorPx": [
+        0,
+        0
+      ],
+      "anchorScene": [
+        -178.8,
+        222.3
+      ],
+      "placedBy": "outline matched to the site plan",
+      "dark": 110,
+      "minThick": 3,
+      "glyphs": 110,
+      "method": "lines",
+      "exclude": [
+        [
+          1300,
+          0,
+          1750,
+          200
+        ],
+        [
+          2780,
+          0,
+          3049,
+          200
+        ],
+        [
+          700,
+          90,
+          1250,
+          190
+        ]
+      ]
+    },
+    {
+      "id": "marshall-liii",
+      "label": "Marshall 1931 · Plate LIII · VS area, A and B sections",
+      "file": "marshall-1931/marshall-plate-LIII-VS-A-B.jpg",
+      "out": "marshall-VS-plate-LIII.json",
+      "source": "Marshall 1931",
+      "plate": "LIII",
+      "page": "84",
+      "area": "VS",
+      "level": "all levels as excavated",
+      "mPerPx": 0.0622,
+      "scaleFrom": "scale bar, 10 ft = 49 px",
+      "anchorPx": [
+        0,
+        0
+      ],
+      "anchorScene": [
+        -93.0,
+        56.1
+      ],
+      "placedBy": "outline matched to the site plan",
+      "dark": 110,
+      "minThick": 3,
+      "glyphs": 110,
+      "method": "lines",
+      "exclude": [
+        [
+          1150,
+          0,
+          1546,
+          700
+        ],
+        [
+          0,
+          1950,
+          300,
+          2024
+        ]
+      ]
+    },
+    {
+      "id": "marshall-xxii",
+      "label": "Marshall 1931 · Plate XXII · SD area, Great Bath",
+      "file": "marshall-1931/marshall-plate-XXII-SD-great-bath.jpg",
+      "out": "marshall-SD-plate-XXII.json",
+      "source": "Marshall 1931",
+      "plate": "XXII",
+      "page": "27",
+      "area": "SD",
+      "level": "original structures (solid black on the plan)",
+      "mPerPx": 0.0602,
+      "scaleFrom": "scale bar, 10 ft = 50.6 px",
+      "anchorPx": [
+        670,
+        715
+      ],
+      "anchorScene": [
+        -453.4,
+        -108.6
+      ],
+      "placedBy": "centre of the pool put on the Great Bath of the site plan (outline matching was ambiguous)",
+      "dark": 95,
+      "minThick": 4,
+      "glyphs": 110,
+      "method": "lines",
+      "exclude": [
+        [
+          80,
+          1450,
+          600,
+          1822
+        ],
+        [
+          0,
+          0,
+          1245,
+          40
+        ]
+      ]
+    },
+    {
+      "id": "marshall-xxx",
+      "label": "Marshall 1931 · Plate XXX · L area",
+      "file": "marshall-1931/marshall-plate-XXX-L-area.jpg",
+      "out": "marshall-L-plate-XXX.json",
+      "source": "Marshall 1931",
+      "plate": "XXX",
+      "page": "40",
+      "area": "L",
+      "level": "all levels as excavated, 1926-27",
+      "mPerPx": 0.1045,
+      "scaleFrom": "scale bar, 60 ft = 175 px",
+      "anchorPx": [
+        0,
+        0
+      ],
+      "anchorScene": [
+        -511.1,
+        -0.2
+      ],
+      "placedBy": "outline matched to the site plan",
+      "dark": 100,
+      "minThick": 3,
+      "glyphs": 70,
+      "method": "lines",
+      "exclude": [
+        [
+          285,
+          930,
+          495,
+          1135
+        ],
+        [
+          1000,
+          0,
+          1309,
+          60
+        ]
+      ]
+    }
+  ]
+}
