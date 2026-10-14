@@ -2319,3 +2319,25 @@ body.touring .note-button {
     font-size: 14.5px;
   }
 }
+
+/* anything marked hidden stays hidden, whatever its own display rule */
+[hidden] {
+  display: none !important;
+}
+
+/* walking on a touch screen: the joystick takes the bottom-left corner, so the
+   guide and the chat move up above it, and the two reading buttons step aside */
+@media (pointer: coarse) {
+  body.walking .note-button,
+  body.walking .script-button {
+    display: none;
+  }
+
+  body.walking .chat-button {
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 206px);
+  }
+
+  body.walking .guide-button {
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 250px);
+  }
+}

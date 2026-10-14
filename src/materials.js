@@ -285,6 +285,12 @@ export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUnif
           tone *= 1.0 - footing - weather + 0.06;
 
           vec3 mortar = base * vec3(0.78, 0.72, 0.68) * (0.92 + grain);
+          // each house (roughly a 9 m patch) fired from its own batch of bricks:
+          // some a little redder, some paler, so the blocks do not look stamped out
+          float batch = mdHash(floor(vMdPos.xz / 9.0) + 31.0);
+          vec3 batchTint = mix(vec3(1.07, 0.97, 0.9), vec3(0.94, 0.97, 1.02), batch) * mix(0.93, 1.06, mdHash(floor(vMdPos.xz / 9.0) + 7.0));
+          tone *= batchTint;
+          mortar *= mix(vec3(1.0), batchTint, 0.5);
           diffuseColor.rgb = mix(mortar, tone, brickMask);
         }`
       );
@@ -294,7 +300,7 @@ export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUnif
   };
 
   if (ruins && !evidence) material.side = THREE.DoubleSide;
-  material.customProgramCacheKey = () => `md-brick-v4-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
+  material.customProgramCacheKey = () => `md-brick-v5-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
   return material;
 }
 
@@ -333,6 +339,10 @@ export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUnif
           c *= 0.9 + broad * 0.16;
           c = mix(c, c * vec3(0.92, 0.9, 0.86), smoothstep(0.55, 0.75, mid));
           c *= 0.95 + fine * 0.1;
+          ${ruins ? `// roofs: each one plastered at its own time, a little lighter or darker
+          float roofPatch = mdHash(floor(p / 7.0) + 5.0);
+          c *= mix(0.88, 1.07, roofPatch);
+          c = mix(c, c * vec3(1.04, 0.98, 0.9), step(0.8, mdHash(floor(p / 7.0) + 19.0)));` : ''}
           diffuseColor.rgb = c;
         }`
       );
@@ -342,6 +352,6 @@ export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUnif
   };
 
   if (ruins && !evidence) material.side = THREE.DoubleSide;
-  material.customProgramCacheKey = () => `md-earth-v3-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
+  material.customProgramCacheKey = () => `md-earth-v4-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
   return material;
 }

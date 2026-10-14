@@ -93,10 +93,9 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
   function speak(text) {
     if (!synth || !readAloud) return;
     synth.cancel();
-    const { said, today } = splitToday(text);
-    // the resident's words, then the note from today, a little faster and lower
+    // only the resident's own words are spoken; the note from today is for reading
+    const { said } = splitToday(text);
     const parts = [[said, 0.95, 1]];
-    if (today) parts.push(['A note from today. ' + today, 1, 0.9]);
     const v = pickVoice();
     parts.forEach(([t, rate, pitch], i) => {
       const u = new SpeechSynthesisUtterance(t.replace(/[()]/g, ' '));

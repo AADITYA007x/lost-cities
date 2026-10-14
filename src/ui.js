@@ -91,6 +91,7 @@ export function createNotePanel(button, panel, note) {
     <h3>Sources</h3>
     <ul class="sources">${note.sources.map((s) => `<li>${s}</li>`).join('')}</ul>
     <p class="notice">${note.dataNotice}</p>
+    ${note.credits ? `<h3>Credits</h3><ul class="sources">${note.credits.map((s) => `<li>${s}</li>`).join('')}</ul>` : ''}
   `;
 
   const open = (on) => {

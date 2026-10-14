@@ -224,7 +224,7 @@ export function buildCity({ lowPower = false } = {}) {
     walls: (opts) => createBrickMaterial({ ruins: true, ...opts }),
     roofs: (opts) => createEarthMaterial({ tone: '#c2a481', ruins: true, ...opts }),
     paving: (opts) => createBrickMaterial({ tone: '#a97452', ruins: true, ...opts }),
-    drains: (opts) => createBrickMaterial({ tone: '#7e4b33', ruins: true, ...opts }),
+    drains: (opts) => createBrickMaterial({ tone: '#8d5a3e', ruins: true, ...opts }),
     ramps: (opts) => createEarthMaterial({ tone: '#ae9070', ruins: true, ...opts }),
   };
   const materials = {};

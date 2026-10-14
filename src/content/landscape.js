@@ -93,7 +93,18 @@ export const LANDSCAPE_NOTE = {
     'Marshall, J. (ed.) 1931. Mohenjo-daro and the Indus Civilization. London: Probsthain.',
     'Mackay, E. J. H. 1938. Further Excavations at Mohenjo-daro. Delhi: Government of India.',
     'Kenoyer, J. M. 1998. Ancient Cities of the Indus Valley Civilization. Karachi: Oxford University Press.',
+    'Jansen, M. 1993. Mohenjo-Daro: Water Splendour 4500 Years Ago. Bergisch Gladbach: Frontinus-Gesellschaft.',
+    'Wheeler, M. 1968. The Indus Civilization. 3rd ed. Cambridge: Cambridge University Press.',
+    'Dales, G. F. 1964. The Mythical Massacre at Mohenjo-daro. Expedition 6 (3).',
+    'Harappa.com (J. M. Kenoyer, R. H. Meadow and others): photographs and essays.',
     'Copernicus DEM GLO-30, tile N27 E068 (ESA / European Union).',
+  ],
+  // what the app itself is made with (also in CREDITS.md)
+  credits: [
+    'three.js (MIT License), built with Vite (MIT License), served by Cloudflare Workers.',
+    'Type: Cormorant Garamond by Christian Thalmann (SIL Open Font License 1.1).',
+    'All 3D shapes, textures and sounds are made in code for this project; no photographs, models or recordings are used. The Indus signs are simple redrawings, not copies of published images.',
+    'Talk to a resident: answers by Google Gemini through this project’s own server. Reading aloud and asking by voice use your browser’s own speech features.',
   ],
   dataNotice:
     'Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.',

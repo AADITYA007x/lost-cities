@@ -318,7 +318,7 @@ function updateSound(dt, light) {
   if (soundCheck <= 0 && life) {
     // the nearest workshop, checked a few times a second
     soundCheck = 0.3;
-    soundState.craftDist = Math.min(999, ...life.stations.map((st) => Math.hypot(st.x - p.x, st.z - p.z, (st.y - p.y) * 0.5)));
+    soundState.craftDist = Math.min(999, ...life.stations.filter((st) => st.craft !== 'farmer' && st.craft !== 'water').map((st) => Math.hypot(st.x - p.x, st.z - p.z, (st.y - p.y) * 0.5)));
   }
   const era = eras ? eras.current : 'height';
   lastSoundState = {

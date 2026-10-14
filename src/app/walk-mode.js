@@ -87,6 +87,7 @@ export function createWalkMode(app) {
       }
       const pose = walk.start(start.x, start.z, start.yaw);
       stage.walking = true;
+      document.body.classList.add('walking');
       controls.enabled = false;
       app.labels.show(false);
       app.info.close();
@@ -125,6 +126,7 @@ export function createWalkMode(app) {
     if (!stage.walking) return;
     walk.enable(false);
     stage.walking = false;
+    document.body.classList.remove('walking');
     minimapEl.classList.remove('on');
     outButton.hidden = true;
     crossButton.hidden = true;
