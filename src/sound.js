@@ -319,10 +319,9 @@ export function createSound() {
         tap(0.05 * (1 - s.craftDist / 30));
       }
     },
-    suspend(hidden) {
-      if (!ctx || !on) return;
-      if (hidden) ctx.suspend();
-      else ctx.resume();
+    // wake the sound again if the browser paused it while the tab was hidden
+    resume() {
+      if (ctx && on && ctx.state !== 'running') ctx.resume();
     },
   };
 }
