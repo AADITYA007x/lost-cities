@@ -54,6 +54,17 @@ export function createEraControl({ button, panel, splitEl, onChange, onSplit }) 
     fraction = Math.min(0.92, Math.max(0.08, e.clientX / window.innerWidth));
     splitEl.style.setProperty('--split', `${fraction * 100}%`);
   });
+  // a small close button on the line, and Esc, end the split view
+  const closeSplit = () => {
+    if (!split) return;
+    split = false;
+    onSplit(split);
+    render();
+  };
+  splitEl.querySelector('.split-close').addEventListener('click', closeSplit);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.classList.contains('open')) closeSplit();
+  });
   const stop = () => (dragging = false);
   handle.addEventListener('pointerup', stop);
   handle.addEventListener('pointercancel', stop);

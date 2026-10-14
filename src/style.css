@@ -1065,3 +1065,20 @@ h1 {
     max-height: calc(100vh - 200px);
   }
 }
+
+.split-close {
+  position: absolute;
+  top: calc(50% + 34px);
+  left: var(--split);
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(239, 230, 216, 0.5);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
