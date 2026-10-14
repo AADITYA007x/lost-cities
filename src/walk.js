@@ -131,6 +131,9 @@ export function createWalk({ camera, canvas, groundAt, onPlatform, joystickEl })
     get yaw() {
       return yaw;
     },
+    get pitch() {
+      return pitch;
+    },
     setCollision(c) {
       collision = c;
     },

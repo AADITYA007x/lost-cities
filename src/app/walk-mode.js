@@ -41,6 +41,11 @@ export function createWalkMode(app) {
     if (params.has('debug')) window.__walk = { walk, collision, ms: performance.now() - t0 };
     walk.setCollision(collision);
     minimap.build(collision);
+    // which places connect to the streets, so we never start (or get stuck) inside a closed room
+    const s = firstStreetStart();
+    const t1 = performance.now();
+    collision.buildReach(app.world.onPlatform, s.x, s.z, [app.city.rects.lowerTown.outline, app.city.rects.citadel.outline]);
+    if (params.has('debug')) window.__walk.reachMs = performance.now() - t1;
     return collision;
   }
 
@@ -65,12 +70,12 @@ export function createWalkMode(app) {
       let start = null;
       if (!firstStreet) {
         const t = controls.target;
-        const spot = collision.nearestFree(t.x, t.z, world.onPlatform, 60);
+        const spot = collision.nearestReachable(t.x, t.z, 80);
         if (spot) start = { x: spot[0], z: spot[1], yaw: Math.atan2(-(t.x - camera.position.x), -(t.z - camera.position.z)) };
       }
       if (!start) {
         const s = firstStreetStart();
-        const spot = collision.nearestFree(s.x, s.z, world.onPlatform, 30) || [s.x, s.z];
+        const spot = collision.nearestReachable(s.x, s.z, 30) || collision.nearestFree(s.x, s.z, world.onPlatform, 30) || [s.x, s.z];
         start = { x: spot[0], z: spot[1], yaw: s.yaw };
       }
       const pose = walk.start(start.x, start.z, start.yaw);
@@ -90,8 +95,8 @@ export function createWalkMode(app) {
         walk.enable(true);
         minimapEl.classList.add('on');
         hint.textContent = isTouch
-          ? 'Use the circle to walk · drag anywhere to look'
-          : 'W A S D or arrow keys to walk · drag to look · Shift to hurry';
+          ? 'Use the circle to walk · drag to look · tap the map to go there'
+          : 'W A S D to walk · drag to look · Shift to hurry · click the map to go there';
         hint.classList.add('show');
         clearTimeout(hintTimer);
         hintTimer = setTimeout(() => hint.classList.remove('show'), 6000);
@@ -112,6 +117,7 @@ export function createWalkMode(app) {
     walk.enable(false);
     stage.walking = false;
     minimapEl.classList.remove('on');
+    outButton.hidden = true;
     hint.classList.remove('show');
     const { world } = app;
     const p = walk.position.clone();
@@ -132,6 +138,32 @@ export function createWalkMode(app) {
     });
   }
 
+  // move the walker to the nearest open place by (x, z), with a short fade
+  const fade = document.getElementById('walk-fade');
+  function jumpTo(x, z) {
+    const spot = collision?.nearestReachable(x, z, 120);
+    if (!spot) return;
+    fade.classList.add('on');
+    setTimeout(() => {
+      walk.start(spot[0], spot[1], walk.yaw, walk.pitch);
+      setShadowsAround(spot[0], spot[1], true);
+      fade.classList.remove('on');
+    }, 220);
+  }
+  // "Find a way out" shows when you stand somewhere not connected to the streets
+  const outButton = document.getElementById('walk-out');
+  outButton.addEventListener('click', () => jumpTo(walk.position.x, walk.position.z));
+  let outCheck = 0;
+  // tap or click the minimap to go there
+  minimapEl.addEventListener('click', (e) => {
+    if (!stage.walking) return;
+    const r = minimapEl.getBoundingClientRect();
+    const u = (e.clientX - r.left) / r.width - 0.5;
+    const v = (e.clientY - r.top) / r.height - 0.5;
+    if (u * u + v * v > 0.25) return;
+    jumpTo(walk.position.x + u * minimap.view, walk.position.z + v * minimap.view);
+  });
+
   button.addEventListener('click', () => (stage.walking ? exit() : enter()));
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && stage.walking && !document.querySelector('.info-panel.open')) exit();
@@ -148,6 +180,11 @@ export function createWalkMode(app) {
     update(dt) {
       walk.update(dt);
       const p = walk.position;
+      outCheck -= dt;
+      if (outCheck <= 0 && collision) {
+        outCheck = 0.5;
+        outButton.hidden = collision.reachable(p.x, p.z);
+      }
       minimap.draw(p.x, p.z, walk.yaw);
       // keep crisp shadows around the walker
       if (Math.hypot(sun.target.position.x - p.x, sun.target.position.z - p.z) > 20) setShadowsAround(p.x, p.z, true);

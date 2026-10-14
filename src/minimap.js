@@ -95,5 +95,5 @@ export function createMinimap(canvasEl) {
     ctx.fillText('N', s / 2, s * 0.12);
   }
 
-  return { build, draw };
+  return { build, draw, view: VIEW };
 }

@@ -254,7 +254,18 @@ soundButton.addEventListener('click', () => {
   setSound(on);
   savePreference(on ? 'on' : 'off');
 });
-document.addEventListener('visibilitychange', () => sound.suspend(document.hidden));
+// sound keeps playing in another tab: the frame loop stops there, so a slow timer
+// keeps the occasional notes and birds going (turn it off with the speaker button)
+let lastSoundState = null;
+let backgroundTimer = 0;
+document.addEventListener('visibilitychange', () => {
+  clearInterval(backgroundTimer);
+  if (document.hidden) {
+    if (sound.on && lastSoundState) backgroundTimer = setInterval(() => sound.update(lastSoundState), 1000);
+  } else {
+    sound.resume();
+  }
+});
 let soundCheck = 0;
 const soundState = { craftDist: 999 };
 function updateSound(dt, light) {
@@ -269,7 +280,7 @@ function updateSound(dt, light) {
     soundState.craftDist = Math.min(999, ...life.stations.map((st) => Math.hypot(st.x - p.x, st.z - p.z, (st.y - p.y) * 0.5)));
   }
   const era = eras ? eras.current : 'height';
-  sound.update({
+  lastSoundState = {
     living: era !== 'buried' && era !== 'today',
     day: light ? THREE.MathUtils.clamp((light.elevation + 4) / 14, 0, 1) : 1,
     rain: daytime.rainLevel,
@@ -277,7 +288,8 @@ function updateSound(dt, light) {
     riverDist: Math.hypot(p.x - river.x, p.z - river.z),
     craftDist: soundState.craftDist,
     population: eras ? eras.population : 1,
-  });
+  };
+  sound.update(lastSoundState);
 }
 
 // ---------- the Indus script ----------

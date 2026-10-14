@@ -1457,3 +1457,43 @@ h1 {
 .sound-button.on .mute {
   display: none;
 }
+
+/* ---------- walking helpers ---------- */
+.minimap.on {
+  cursor: pointer;
+}
+
+.walk-out {
+  position: fixed;
+  left: 50%;
+  bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px);
+  transform: translateX(-50%);
+  z-index: 6;
+  font-family: var(--serif);
+  font-size: 17px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 178, 106, 0.7);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.walk-out[hidden] {
+  display: none;
+}
+
+.walk-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  background: #14100d;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.walk-fade.on {
+  opacity: 1;
+}
