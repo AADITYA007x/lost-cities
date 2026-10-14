@@ -2266,3 +2266,23 @@ body.touring .note-button {
   -webkit-backdrop-filter: none;
   background: rgba(20, 16, 13, 0.95);
 }
+
+/* ten residents: on a phone, one row that scrolls sideways instead of four rows */
+@media (max-width: 640px) {
+  .chat-personas {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+
+  .chat-personas::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chat-personas button {
+    flex: none;
+  }
+}

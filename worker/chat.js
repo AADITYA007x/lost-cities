@@ -10,9 +10,16 @@ const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 
 const PERSONAS = {
+  water: 'someone who lives in a courtyard house off First Street and draws water from the house well every day',
   beads: 'a bead maker who works carnelian in a small workshop in the lower town',
   potter: 'a potter with a wheel and a kiln near the edge of the lower town',
-  water: 'someone who lives in a courtyard house off First Street and draws water from the house well every day',
+  shell: 'a shell worker who saws bangles from conch shells brought from the coast',
+  seals: 'a seal carver who cuts animals and signs into small squares of steatite (you carve the signs as you were taught, but never say what they mean or how they are read)',
+  spinning: 'a spinner who spins cotton into thread with a hand spindle in a courtyard',
+  metal: 'a metalworker who melts and casts copper over a charcoal fire',
+  grinding: 'someone who grinds wheat and barley into flour on a flat stone at home',
+  carter: 'a carter who drives a cart drawn by a humped ox through the streets, carrying sacks',
+  farmer: 'a farmer who grows wheat, barley and cotton in a field on the plain outside the city',
 };
 
 const MAX_MESSAGES = 12;

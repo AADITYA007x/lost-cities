@@ -21,7 +21,7 @@ import { ERA_BY_ID } from './content/eras.js';
 import { SEASONS } from './daylight.js';
 import { PLACE_LABELS as NAMES } from './content/landscape.js';
 import { createGuide } from './guide.js';
-import { createBustle } from './bustle.js';
+import { createBustle, planFields } from './bustle.js';
 import { createWaterMarkers } from './water-markers.js';
 import { FEATURES } from './content/features.js';
 import { TOUR, PLACE_GROUPS, SEARCH_WORDS } from './content/tour.js';
@@ -106,7 +106,11 @@ async function init() {
     groundAt,
   });
 
-  life = createLife({ city, groundAt, lowPower });
+  // the fields are planned first, so farmers can work in those nearest the city
+  const centre = city.features.citadel.clone().lerp(city.features.lowerTown, 0.5);
+  centre.y = groundAt(centre.x, centre.z);
+  const fieldPlan = planFields({ city, world: { terrain, siteCenter: centre, groundAt }, lowPower });
+  life = createLife({ city, groundAt, lowPower, farmSpots: fieldPlan.farms });
   scene.add(life.group);
   app.life = life;
   app.drainsMesh = weather.drainsMesh;
@@ -121,7 +125,7 @@ async function init() {
   siteCenter.y = groundAt(siteCenter.x, siteCenter.z);
 
   // the busy city: smoke, birds, carts, cloth on roofs, fields and trees (imagined)
-  bustle = createBustle({ city, world: { terrain, siteCenter, groundAt }, life, lowPower });
+  bustle = createBustle({ city, world: { terrain, siteCenter, groundAt }, life, lowPower, fieldPlan });
   scene.add(bustle.group);
   app.info.addTargets(bustle.pickables);
   app.bustle = bustle;
@@ -386,7 +390,10 @@ const living = () => (eras && (eras.current === 'buried' || eras.current === 'to
 // the nearest workshop (or well) of a craft, and a view of its worker
 function nearestStation(craft) {
   const here = stage.walking && app.walkPosition ? app.walkPosition() : controls.target;
-  const list = life ? life.stations.filter((st) => st.craft === craft) : [];
+  const all = life ? life.stations.filter((st) => st.craft === craft) : [];
+  // someone who is at work right now, if there is one; otherwise the nearest place
+  const out = all.filter((st) => life.isOut(st));
+  const list = out.length ? out : all;
   if (!list.length) return null;
   return list.reduce((a, b) => (Math.hypot(a.x - here.x, a.z - here.z) <= Math.hypot(b.x - here.x, b.z - here.z) ? a : b));
 }
@@ -395,6 +402,8 @@ function goToStation(craft, { walkJump = true } = {}) {
   setEra(living());
   const st = nearestStation(craft);
   if (!st) return;
+  // the person you go to is always there, even at night or in a thinner moment
+  life.focus(st);
   // in front of the worker (they face +z in their own frame)
   const fx = Math.sin(st.yaw);
   const fz = Math.cos(st.yaw);
@@ -429,8 +438,29 @@ function clearViewOf(target, yaw) {
   return target.clone().add(new THREE.Vector3(2, 22, 3));
 }
 // take the visitor to the person they talk to
-const PERSONA_CRAFT = { water: 'water', beads: 'beads', potter: 'potter' };
-const goToPerson = (persona) => goToStation(PERSONA_CRAFT[persona]);
+function goToPerson(persona) {
+  if (!app.world) return;
+  app.info?.close();
+  // let the last resident go back to their day
+  life?.focus(null);
+  app.bustle?.focusCart(null);
+  if (persona === 'carter') {
+    setEra(living());
+    const here = stage.walking && app.walkPosition ? app.walkPosition() : controls.target;
+    const c = app.bustle?.nearestCart(here.x, here.z);
+    if (!c) return;
+    app.bustle.focusCart(c.cart);
+    if (stage.walking && app.walkJump) {
+      app.walkJump(c.x + Math.sin(c.yaw) * 6, c.z + Math.cos(c.yaw) * 6, [c.x, c.z]);
+      return;
+    }
+    const target = new THREE.Vector3(c.x, c.y + 1, c.z);
+    flyTo({ target, position: target.clone().add(new THREE.Vector3(-Math.sin(c.yaw) * 14 + 6, 11, -Math.cos(c.yaw) * 14)) });
+    return;
+  }
+  // everyone else works at a station of their craft (the neighbour at a well)
+  goToStation(persona);
+}
 const chat = createChat({
   panel: document.getElementById('chat-panel'),
   button: chatButton,

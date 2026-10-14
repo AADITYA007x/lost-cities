@@ -1,10 +1,18 @@
 // Talk to a resident: a small chat panel. Questions go to /api/chat on our Worker,
 // which asks Gemini with the app's own notes; the key never reaches the browser.
 
+// each one is someone the city shows at work (see life.js and bustle.js)
 const PERSONAS = [
   { id: 'water', label: 'Neighbour by the well' },
   { id: 'beads', label: 'Bead maker' },
   { id: 'potter', label: 'Potter' },
+  { id: 'shell', label: 'Shell worker' },
+  { id: 'seals', label: 'Seal carver' },
+  { id: 'spinning', label: 'Spinner' },
+  { id: 'metal', label: 'Metalworker' },
+  { id: 'grinding', label: 'Grinding grain' },
+  { id: 'carter', label: 'Carter' },
+  { id: 'farmer', label: 'Farmer' },
 ];
 
 const SUGGESTIONS = [

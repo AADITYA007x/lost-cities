@@ -21,14 +21,56 @@ const CROP_COLOURS = {
   after: ['#8f9a52', '#c3bea0', '#a58a5e'],
 };
 
-export function createBustle({ city, world, life, lowPower }) {
+const FIELD_W = 44;
+const FIELD_D = 28;
+const onCityOf = (city) => {
+  const outlines = [city.rects.lowerTown.outline, city.rects.citadel.outline];
+  return (x, z, m = 0) =>
+    outlines.some((o) => [[0, 0], [m, 0], [-m, 0], [0, m], [0, -m], [m, m], [-m, -m], [m, -m], [-m, m]].some(([dx, dz]) => pointInPolygon(x + dx, z + dz, o)));
+};
+
+// Where the fields lie (imagined), and a few farmers at work in those nearest the
+// city. Planned before the people, so the farmers can be among them.
+export function planFields({ city, world, lowPower }) {
+  const rng = createRng(47).next;
+  const { heightAt, waterLevel } = world.terrain;
+  const onCity = onCityOf(city);
+  const [ux, uz] = GRID.u;
+  const [vx, vz] = GRID.v;
+  const reach = lowPower ? 1100 : 1500;
+  const list = [];
+  for (let a = -reach; a < reach; a += FIELD_W) {
+    for (let b = -reach; b < reach; b += FIELD_D) {
+      const cx = world.siteCenter.x + ux * a + vx * b;
+      const cz = world.siteCenter.z + uz * a + vz * b;
+      const dist = Math.hypot(a, b);
+      if (dist > reach || rng() < dist / reach - 0.35) continue;
+      if (onCity(cx, cz, 70) || heightAt(cx, cz) <= waterLevel + 0.4) continue;
+      if (rng() < 0.12) continue; // grazing land and paths
+      const crop = rng() < 0.55 ? 0 : rng() < 0.6 ? 1 : 2;
+      list.push({ cx, cz, crop, shade: 0.82 + rng() * 0.32 });
+    }
+  }
+  // farmers: in sown fields close to the city, spread apart
+  const farms = [];
+  for (const f of list) {
+    if (farms.length >= (lowPower ? 4 : 7)) break;
+    if (f.crop !== 0 || !onCity(f.cx, f.cz, 130)) continue; // wheat and barley
+    if (farms.some((o) => Math.hypot(o.x - f.cx, o.z - f.cz) < 90)) continue;
+    const off = (rng() - 0.5) * 16;
+    const x = f.cx + ux * off;
+    const z = f.cz + uz * off;
+    farms.push({ x, z, y: heightAt(x, z) + 0.3, yaw: Math.atan2(vx, vz) + (rng() < 0.5 ? 0 : Math.PI) });
+  }
+  return { list, farms, reach };
+}
+
+export function createBustle({ city, world, life, lowPower, fieldPlan }) {
   const group = new THREE.Group();
   group.name = 'bustle';
   const rng = createRng(31).next;
   const { heightAt, waterLevel } = world.terrain;
-  const outlines = [city.rects.lowerTown.outline, city.rects.citadel.outline];
-  const onCity = (x, z, m = 0) =>
-    outlines.some((o) => [[0, 0], [m, 0], [-m, 0], [0, m], [0, -m], [m, m], [-m, -m], [m, -m], [-m, m]].some(([dx, dz]) => pointInPolygon(x + dx, z + dz, o)));
+  const onCity = onCityOf(city);
   const pickables = [];
 
   // ---------- smoke ----------
@@ -154,6 +196,18 @@ export function createBustle({ city, world, life, lowPower }) {
   tint(new THREE.SphereGeometry(0.34, 8, 6).scale(1, 0.75, 1.2).translate(0.25, 1.1, -0.3), '#d8cbb0');
   tint(new THREE.SphereGeometry(0.32, 8, 6).scale(1, 0.75, 1.2).translate(-0.25, 1.08, 0.25), '#c9b48c');
   tint(new THREE.SphereGeometry(0.28, 8, 6).scale(1, 0.8, 1.1).translate(0.05, 1.42, 0), '#e2d7bf');
+  // the carter, walking beside the ox's head with a stick
+  const cx0 = 0.95;
+  const cz0 = 2.35;
+  tint(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 7).translate(cx0 + 0.09, 0.42, cz0 + 0.08), '#7a4e33');
+  tint(new THREE.CylinderGeometry(0.06, 0.05, 0.84, 7).translate(cx0 - 0.09, 0.42, cz0 - 0.08), '#7a4e33');
+  tint(new THREE.CylinderGeometry(0.16, 0.25, 0.52, 10).translate(cx0, 0.66, cz0), '#e6dcc6');
+  tint(new THREE.CylinderGeometry(0.14, 0.16, 0.56, 10).translate(cx0, 1.18, cz0), '#7a4e33');
+  tint(new THREE.SphereGeometry(0.11, 10, 8).translate(cx0, 1.6, cz0), '#7a4e33');
+  tint(new THREE.SphereGeometry(0.115, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.45).translate(cx0, 1.62, cz0 - 0.01), '#1b1410');
+  tint(new THREE.CylinderGeometry(0.035, 0.03, 0.6, 6).rotateX(-0.5).translate(cx0 - 0.2, 1.2, cz0 + 0.15), '#7a4e33');
+  tint(new THREE.CylinderGeometry(0.035, 0.03, 0.6, 6).translate(cx0 + 0.2, 1.15, cz0), '#7a4e33');
+  tint(new THREE.CylinderGeometry(0.015, 0.015, 1.5, 5).rotateX(0.7).translate(cx0 - 0.22, 1.25, cz0 + 0.75), '#5a4636');
   const cartGeo = mergeGeometries(cartParts);
   const cartMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
   const paths = life.paths || [];
@@ -163,6 +217,7 @@ export function createBustle({ city, world, life, lowPower }) {
     const path = paths[Math.floor(rng() * paths.length)];
     carts.push({ path, s: rng(), dir: rng() < 0.5 ? 1 : -1, speed: 0.75 + rng() * 0.25, lateral: (rng() < 0.5 ? -1 : 1) * Math.min(1.2, path.width * 0.3), threshold: rng() });
   }
+  let focusedCart = null;
   const cartMesh = new THREE.InstancedMesh(cartGeo, cartMat, Math.max(1, nCarts));
   cartMesh.count = nCarts;
   cartMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -203,52 +258,42 @@ export function createBustle({ city, world, life, lowPower }) {
   const fieldCrops = [];
   const [ux, uz] = GRID.u;
   const [vx, vz] = GRID.v;
-  const FW = 44;
-  const FD = 28;
-  const reach = lowPower ? 1100 : 1500;
-  const dry = (x, z) => heightAt(x, z) > waterLevel + 0.4;
-  for (let a = -reach; a < reach; a += FW) {
-    for (let b = -reach; b < reach; b += FD) {
-      const cx = world.siteCenter.x + ux * a + vx * b;
-      const cz = world.siteCenter.z + uz * a + vz * b;
-      const dist = Math.hypot(a, b);
-      if (dist > reach || rng() < dist / reach - 0.35) continue;
-      if (onCity(cx, cz, 70) || !dry(cx, cz)) continue;
-      if (rng() < 0.12) continue; // grazing land and paths
-      const crop = rng() < 0.55 ? 0 : rng() < 0.6 ? 1 : 2;
-      // a field: 2 x 2 quads following the ground, with a bund (the gap) around it
-      const w = FW - 3;
-      const d = FD - 3;
-      const pos = [];
-      const idx = [];
-      for (let j = 0; j <= 2; j++) {
-        for (let i = 0; i <= 2; i++) {
-          const pa = (i / 2 - 0.5) * w;
-          const pb = (j / 2 - 0.5) * d;
-          const x = cx + ux * pa + vx * pb;
-          const z = cz + uz * pa + vz * pb;
-          pos.push(x, heightAt(x, z) + 0.15, z);
-        }
+  const reach = fieldPlan.reach;
+  for (const fld of fieldPlan.list) {
+    const { cx, cz } = fld;
+    // a field: 2 x 2 quads following the ground, with a bund (the gap) around it
+    const w = FIELD_W - 3;
+    const d = FIELD_D - 3;
+    const pos = [];
+    const idx = [];
+    for (let j = 0; j <= 2; j++) {
+      for (let i = 0; i <= 2; i++) {
+        const pa = (i / 2 - 0.5) * w;
+        const pb = (j / 2 - 0.5) * d;
+        const x = cx + ux * pa + vx * pb;
+        const z = cz + uz * pa + vz * pb;
+        pos.push(x, heightAt(x, z) + 0.3, z);
       }
-      for (let j = 0; j < 2; j++) {
-        for (let i = 0; i < 2; i++) {
-          const k = j * 3 + i;
-          idx.push(k, k + 3, k + 1, k + 1, k + 3, k + 4);
-        }
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.setIndex(idx);
-      g.computeVertexNormals();
-      fieldParts.push(g.toNonIndexed());
-      fieldCrops.push({ crop, shade: 0.82 + rng() * 0.32 });
     }
+    for (let j = 0; j < 2; j++) {
+      for (let i = 0; i < 2; i++) {
+        const k = j * 3 + i;
+        idx.push(k, k + 3, k + 1, k + 1, k + 3, k + 4);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    fieldParts.push(g.toNonIndexed());
+    fieldCrops.push({ crop: fld.crop, shade: fld.shade });
   }
   let fields = null;
   if (fieldParts.length) {
     const geo = mergeGeometries(fieldParts);
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 3), 3));
-    fields = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+    // drawn just over the ground, which is a little coarser than the height samples
+    fields = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 }));
     fields.receiveShadow = true;
     fields.userData = { kind: 'fields', certainty: 2 };
     fieldGroup.add(fields);
@@ -315,13 +360,19 @@ export function createBustle({ city, world, life, lowPower }) {
     group,
     pickables,
     setSeason,
+    // keep one cart out (the carter you are talking to)
+    focusCart(c) {
+      focusedCart = c;
+    },
     // where the cart nearest a point is now (for the guide), or null
     nearestCart(x, z) {
       let best = null;
       for (const c of carts) {
         if (!c.at) continue;
         const d = Math.hypot(c.at[0] - x, c.at[2] - z);
-        if (!best || d < best.d) best = { d, x: c.at[0], y: c.at[1], z: c.at[2], yaw: c.at[3] };
+        // carts on the move now first
+        const score = d + (c.hidden ? 5000 : 0);
+        if (!best || score < best.score) best = { score, d, x: c.at[0], y: c.at[1], z: c.at[2], yaw: c.at[3], cart: c };
       }
       return best;
     },
@@ -410,7 +461,8 @@ export function createBustle({ city, world, life, lowPower }) {
         const far = camera.position.y > 1400;
         carts.forEach((c, i) => {
           const len = Math.hypot(c.path.b[0] - c.path.a[0], c.path.b[1] - c.path.a[1]);
-          c.s += (c.dir * c.speed * dt) / len;
+          // the carter you are talking to stops for you
+          if (c !== focusedCart) c.s += (c.dir * c.speed * dt) / len;
           if (c.s > 1) {
             c.s = 1;
             c.dir = -1;
@@ -426,7 +478,9 @@ export function createBustle({ city, world, life, lowPower }) {
           const z = c.path.a[1] + (c.path.b[1] - c.path.a[1]) * c.s + ux2 * side;
           const y = world.groundAt(x, z);
           c.at = [x, y, z, Math.atan2(ux2 * c.dir, uz2 * c.dir)];
-          if (c.threshold > out || far || tmp.set(x, y, z).distanceToSquared(camera.position) > 900 * 900) {
+          c.hidden = c.threshold > out;
+          if (c === focusedCart) c.hidden = false;
+          if (c.hidden || far || tmp.set(x, y, z).distanceToSquared(camera.position) > 900 * 900) {
             cartMesh.setMatrixAt(i, HIDE);
             return;
           }

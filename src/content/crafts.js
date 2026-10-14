@@ -56,7 +56,7 @@ export const CRAFTS = {
   spinning: {
     label: 'Spinner',
     title: 'Spinning cotton',
-    what: 'Spinning cotton into thread with a hand spindle.',
+    what: 'Spinning cotton into thread with a drop spindle: a stick with a clay whorl that turns as it hangs from the thread.',
     known: [
       'Traces of cotton cloth survived on a silver vessel found at Mohenjo-daro: among the earliest known cotton textiles in the world.',
       'Spindle whorls are common finds. Some cloth seems to have been dyed with madder, a red dye.',
@@ -84,6 +84,17 @@ export const CRAFTS = {
     ],
     debated: null,
     sources: ['kenoyer', 'marshall'],
+  },
+  farmer: {
+    label: 'Farmer',
+    title: 'Working the fields',
+    what: 'Bent over the crop, weeding or cutting it by hand.',
+    known: [
+      'Wheat and barley were the main grains, grown through the cool season; cotton and sesame were among the summer crops.',
+      'Long blades of chert (a hard stone) are common finds; some were probably used to cut crops.',
+    ],
+    debated: 'Where the city’s fields were, who worked them, and how they were watered are not known.',
+    sources: ['kenoyer'],
   },
   water: {
     label: 'Drawing water',

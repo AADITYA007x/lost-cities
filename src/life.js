@@ -95,7 +95,10 @@ function poseFor(f, t) {
     case 'seals':
       return { ...p, lean: 0.42, head: 0.35, armR: [1.25 + 0.04 * s(11), 0.2], armL: [1.2, -0.25] };
     case 'spinning':
-      return { ...p, lean: 0.04, armR: [1.75 + 0.08 * s(4), 0.25], armL: [0.4, -0.1] };
+      // right hand raised, letting the spindle turn below it; left hand holds the cotton
+      return { ...p, lean: 0.04, head: 0.25, armR: [2.35 + 0.05 * s(4), 0.35], armL: [1.15, -0.45] };
+    case 'farming':
+      return { ...p, lean: 0.62 + 0.05 * s(1.4), head: 0.25, armR: [0.75 + 0.25 * s(2.8), 0.12], armL: [0.6 + 0.15 * s(2.8, 1), -0.12] };
     case 'metal':
       return { ...p, lean: 0.22, armR: [0.85 + 0.3 * s(3), 0.15], armL: [0.6, -0.2] };
     case 'grinding':
@@ -114,7 +117,7 @@ function poseFor(f, t) {
 const SIT = { hip: 0.22, legFwd: 1.5, legYaw: 1.0, legLen: 0.55 };
 const STAND = { hip: 0.86, legFwd: 0, legYaw: 0, legLen: 1 };
 
-export function createLife({ city, groundAt, lowPower }) {
+export function createLife({ city, groundAt, lowPower, farmSpots = [] }) {
   const rng = createRng(7).next;
   const group = new THREE.Group();
   group.name = 'life';
@@ -136,6 +139,11 @@ export function createLife({ city, groundAt, lowPower }) {
   })();
 
   function addFigure(f) {
+    // the station a worker belongs to remembers its figures (to show them on demand)
+    if (f.kind === 'craft' && stations.length) {
+      const st = stations[stations.length - 1];
+      (st.figures ||= []).push(figures.length);
+    }
     figures.push({
       skin: new THREE.Color(pick(SKIN)),
       cloth: new THREE.Color(pick(CLOTH)),
@@ -194,6 +202,14 @@ export function createLife({ city, groundAt, lowPower }) {
     const y = groundAt(w.x, w.z);
     stations.push({ craft: 'water', x: w.x + back.x, z: w.z + back.z, y, yaw, noProps: true });
     addFigure({ activity: 'water', pose: STAND, x: w.x + back.x, y, z: w.z + back.z, yaw, kind: 'craft', craft: 'water' });
+  }
+
+  // farmers in the fields nearest the city (cutting or weeding, bent over the crop)
+  for (const fm of farmSpots) {
+    stations.push({ craft: 'farmer', x: fm.x, z: fm.z, y: fm.y, yaw: fm.yaw, noProps: true });
+    addFigure({ activity: 'farming', pose: STAND, x: fm.x, y: fm.y, z: fm.z, yaw: fm.yaw, kind: 'craft', craft: 'farmer' });
+    const off = new THREE.Vector3(2.2, 0, 1.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), fm.yaw);
+    addFigure({ activity: 'farming', pose: STAND, x: fm.x + off.x, y: fm.y, z: fm.z + off.z, yaw: fm.yaw + 0.4, phase: 2, kind: 'craft', craft: 'farmer' });
   }
 
   // ---------- walkers on the streets ----------
@@ -271,6 +287,28 @@ export function createLife({ city, groundAt, lowPower }) {
   const arms = mk(geo.arm, skinMat, n * 2, true);
   const legs = mk(geo.leg, skinMat, n * 2, true);
   const pots = mk(geo.pot, potMat, n);
+  // a drop spindle hanging from each spinner's raised hand: a stick and a clay whorl
+  const spinners = figures.map((f, i) => (f.activity === 'spinning' ? i : -1)).filter((i) => i >= 0);
+  const spindleGeo = mergeGeometries([
+    new THREE.CylinderGeometry(0.01, 0.01, 0.34, 5).translate(0, -0.42, 0),
+    new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12).translate(0, -0.52, 0),
+    new THREE.CylinderGeometry(0.004, 0.004, 0.26, 3).translate(0, -0.13, 0),
+  ]);
+  const spindles = new THREE.InstancedMesh(spindleGeo, new THREE.MeshStandardMaterial({ color: '#8a6a48', roughness: 0.9 }), Math.max(1, spinners.length));
+  spindles.count = spinners.length;
+  spindles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  spindles.frustumCulled = false;
+  group.add(spindles);
+  mats.push(spindles.material);
+  // the cotton fibre held in the raised hand, feeding the thread
+  const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 8, 6).scale(1.2, 0.9, 1.2), new THREE.MeshStandardMaterial({ color: '#f2ede2', roughness: 1 }), Math.max(1, spinners.length));
+  puffs.count = spinners.length;
+  puffs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  puffs.frustumCulled = false;
+  group.add(puffs);
+  mats.push(puffs.material);
+  const spindleOf = new Map(spinners.map((fi, k) => [fi, k]));
+  const handPos = new THREE.Vector3();
   figures.forEach((f, i) => {
     bodies.setColorAt(i, f.cloth);
     heads.setColorAt(i, f.skin);
@@ -359,6 +397,12 @@ export function createLife({ city, groundAt, lowPower }) {
     for (const [k, side, a] of [[0, 1, p.armR], [1, -1, p.armL]]) {
       M.copy(B).multiply(T.makeTranslation(-0.17 * side, 0.5, 0)).multiply(rotXY(-a[0], a[1]));
       arms.setMatrixAt(i * 2 + k, M);
+      if (k === 0 && spindleOf.has(i)) {
+        // the spindle hangs straight down from the hand and turns
+        handPos.set(0, -0.6, 0).applyMatrix4(M);
+        spindles.setMatrixAt(spindleOf.get(i), T.makeRotationY(t * 9 + f.phase).setPosition(handPos));
+        puffs.setMatrixAt(spindleOf.get(i), T.makeTranslation(handPos.x, handPos.y + 0.03, handPos.z));
+      }
     }
     // legs: forward and splayed when sitting, swinging when walking
     for (const [k, side] of [[0, 1], [1, -1]]) {
@@ -385,7 +429,14 @@ export function createLife({ city, groundAt, lowPower }) {
     legs.setMatrixAt(i * 2, HIDE);
     legs.setMatrixAt(i * 2 + 1, HIDE);
     pots.setMatrixAt(i, HIDE);
+    if (spindleOf.has(i)) {
+      spindles.setMatrixAt(spindleOf.get(i), HIDE);
+      puffs.setMatrixAt(spindleOf.get(i), HIDE);
+    }
   }
+
+  // the station of the resident being talked to: its people are always shown
+  let focus = null;
 
   let lastPose = -1;
   return {
@@ -393,6 +444,15 @@ export function createLife({ city, groundAt, lowPower }) {
     stations,
     pickables,
     paths,
+    // keep a station's people in view (the resident you are talking to), or null
+    focus(st) {
+      focus = st;
+      lastPose = -1;
+    },
+    // is a station's worker out at the moment?
+    isOut(st) {
+      return Boolean(st.figures?.length && figures[st.figures[0]].shown);
+    },
     // day: 0 night .. 1 full day; rain: 0..1; evidence: 0..1 (the certainty switch)
     update(dt, t, { camera, day, rain, evidence, population = 1 }) {
       const opacity = 1 - evidence;
@@ -434,6 +494,7 @@ export function createLife({ city, groundAt, lowPower }) {
           f.stride += f.speed * step * 4.2;
         } else {
           f.shown = working && f.threshold < population ? 1 : 0;
+          if (focus && focus.figures?.includes(i)) f.shown = 1;
         }
         if (!f.shown || far || tmpV.set(f.x, f.y, f.z).distanceToSquared(camera.position) > 700 * 700) hideFigure(i);
         else placeFigure(i, f, t);
@@ -446,7 +507,7 @@ export function createLife({ city, groundAt, lowPower }) {
       });
       wheelMesh.instanceMatrix.needsUpdate = true;
       potOnWheel.instanceMatrix.needsUpdate = true;
-      for (const m of [bodies, heads, hairs, arms, legs, pots]) m.instanceMatrix.needsUpdate = true;
+      for (const m of [bodies, heads, hairs, arms, legs, pots, spindles, puffs]) m.instanceMatrix.needsUpdate = true;
     },
   };
 }
