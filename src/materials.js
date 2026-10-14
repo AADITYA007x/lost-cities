@@ -86,6 +86,65 @@ function addWetness(shader, { puddles }) {
     );
 }
 
+// ---------- city through time ----------
+// Shared values set by the time view (app/eras.js). Pieces tagged with aTag
+// (eras bit mask, building number, base height; see city/batch.js) are hidden when
+// they do not exist in the chosen moment, or cut down to ruins.
+export const ERA = {
+  uEraBit: { value: 2 }, // 1 founding, 2 height, 4 late, 8 buried, 16 today
+  uKeep: { value: 1 }, // buildings with a number above this are missing or ruined
+  uMissing: { value: 0 }, // 0: missing buildings are not there; 1: they stand as ruins
+  uStandH: { value: 999 }, // standing buildings are cut above this height (m)
+  uRuinH: { value: 999 }, // ruined buildings are cut above this height (m)
+};
+
+const ERA_DISCARD = `
+  if (vTag.x > 0.5) {
+    if (mod(floor(vTag.x / uEraBit + 0.001), 2.0) < 0.5) discard;
+    bool standing = vTag.y <= uKeep;
+    if (!standing && uMissing < 0.5) discard;
+    if (vMdPos.y - vTag.z > (standing ? uStandH : uRuinH)) discard;
+  }`;
+const ERA_UNIFORMS = `
+  uniform float uEraBit;
+  uniform float uKeep;
+  uniform float uMissing;
+  uniform float uStandH;
+  uniform float uRuinH;
+  varying vec3 vTag;`;
+
+function addRuins(shader) {
+  Object.assign(shader.uniforms, ERA);
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\n attribute vec3 aTag;\n varying vec3 vTag;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\n vTag = aTag;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>${ERA_UNIFORMS}`)
+    .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>${ERA_DISCARD}`)
+    // where a wall is cut down, its inside shows: paint it like the brick core
+    .replace(
+      '#include <emissivemap_fragment>',
+      `if (!gl_FrontFacing) diffuseColor.rgb *= vec3(0.78, 0.7, 0.62);
+      #include <emissivemap_fragment>`
+    );
+}
+
+// the matching shadow caster, so cut-down walls also cast shorter shadows
+export function createRuinDepthMaterial() {
+  const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, ERA);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\n attribute vec3 aTag;\n varying vec3 vTag;\n varying vec3 vMdPos;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\n vTag = aTag;\n vMdPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>${ERA_UNIFORMS}\n varying vec3 vMdPos;`)
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>${ERA_DISCARD}`);
+  };
+  m.customProgramCacheKey = () => 'md-ruin-depth-v1';
+  return m;
+}
+
 // ---------- certainty layer ----------
 // Evidence variants of a material: "ghost" (inferred: translucent with soft edges) and
 // "sketch" (imagined: faint fill, drawn edges). uMix runs from 0 (the living city)
@@ -143,7 +202,7 @@ function evidenceSetup(material, evidence) {
 // so every wall, whatever its size, gets correctly scaled courses (English bond:
 // a course of stretchers, then a course of headers). Joints fade out with
 // distance to avoid shimmering.
-export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUniform = null } = {}) {
+export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUniform = null, ruins = false } = {}) {
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(tone),
     roughness: 0.94,
@@ -230,15 +289,17 @@ export function createBrickMaterial({ tone = '#b5774c', evidence = null, mixUnif
         }`
       );
     addWetness(shader, { puddles: false });
+    if (ruins) addRuins(shader);
     addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => `md-brick-v3-${evidence || 'solid'}`;
+  if (ruins && !evidence) material.side = THREE.DoubleSide;
+  material.customProgramCacheKey = () => `md-brick-v4-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
   return material;
 }
 
 // Dusty, trodden earth with soft large-scale variation.
-export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUniform = null } = {}) {
+export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUniform = null, ruins = false } = {}) {
   const material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(tone),
     roughness: 1.0,
@@ -276,9 +337,11 @@ export function createEarthMaterial({ tone = '#a8845f', evidence = null, mixUnif
         }`
       );
     addWetness(shader, { puddles: true });
+    if (ruins) addRuins(shader);
     addEvidence(shader, evidence, mixUniform);
   };
 
-  material.customProgramCacheKey = () => `md-earth-v2-${evidence || 'solid'}`;
+  if (ruins && !evidence) material.side = THREE.DoubleSide;
+  material.customProgramCacheKey = () => `md-earth-v3-${evidence || 'solid'}${ruins ? '-ruins' : ''}`;
   return material;
 }

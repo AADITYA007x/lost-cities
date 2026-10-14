@@ -37,7 +37,18 @@ const lampRand = (lot, k) => {
   return v - Math.floor(v);
 };
 
-export function buildHouse(lot, y, rng, out, { known, detail }) {
+export function buildHouse(lot, y, rng, out, opts) {
+  // tag every piece of this house with one number, so the time view can show only
+  // some houses (a young city) or leave some as ruins (a late one)
+  const saved = [out.walls.tag, out.roofs.tag];
+  const tag = { era: 31, build: lampRand(lot, 7), base: y };
+  out.walls.tag = tag;
+  out.roofs.tag = tag;
+  buildHouseInner(lot, y, rng, out, opts);
+  [out.walls.tag, out.roofs.tag] = saved;
+}
+
+function buildHouseInner(lot, y, rng, out, { known, detail }) {
   const { walls, roofs, wells } = out;
   const wallCert = known ? CERTAINTY.inferred : CERTAINTY.imagined;
   const upperCert = known ? CERTAINTY.inferred : CERTAINTY.imagined;

@@ -18,7 +18,7 @@ import {
   boundsOf,
   centroidOf,
 } from './layout.js';
-import { createBrickMaterial, createEarthMaterial } from '../materials.js';
+import { createBrickMaterial, createEarthMaterial, createRuinDepthMaterial } from '../materials.js';
 
 function platformMesh(outline, height, holes, sideMaterial, topMaterial) {
   const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
@@ -164,7 +164,11 @@ export function buildCity({ lowPower = false } = {}) {
   // ---------- citadel ----------
   const bathTraced = traces.some(({ data }) => data.meta?.area === 'SD' && /XXII/.test(data.meta?.plate || ''));
   const plan = planCitadel(citadel, { bathTraced });
+  // everything on the citadel is measured from the platform top when it falls to ruin
+  const savedTags = [world.walls.tag, world.roofs.tag, world.paving.tag];
+  world.walls.tag = world.roofs.tag = world.paving.tag = { era: 31, build: 0, base: citadel.y };
   buildCitadel(citadel, plan, rng, world, { detail, covered });
+  [world.walls.tag, world.roofs.tag, world.paving.tag] = savedTags;
   // a ramp from the citadel east toward the lower town (imagined)
   const rz = plan.bath.z1 + 20;
   const edge = (() => {
@@ -185,10 +189,10 @@ export function buildCity({ lowPower = false } = {}) {
   // one shared uniform drives the certainty layer for every material
   const mixUniform = { value: 0 };
   const kinds = {
-    walls: (opts) => createBrickMaterial(opts),
-    roofs: (opts) => createEarthMaterial({ tone: '#c2a481', ...opts }),
-    paving: (opts) => createBrickMaterial({ tone: '#a97452', ...opts }),
-    ramps: (opts) => createEarthMaterial({ tone: '#ae9070', ...opts }),
+    walls: (opts) => createBrickMaterial({ ruins: true, ...opts }),
+    roofs: (opts) => createEarthMaterial({ tone: '#c2a481', ruins: true, ...opts }),
+    paving: (opts) => createBrickMaterial({ tone: '#a97452', ruins: true, ...opts }),
+    ramps: (opts) => createEarthMaterial({ tone: '#ae9070', ruins: true, ...opts }),
   };
   const materials = {};
   for (const [kind, make] of Object.entries(kinds)) {
@@ -210,11 +214,13 @@ export function buildCity({ lowPower = false } = {}) {
 
   const certaintyEntries = [];
   const pickables = [citadelMesh, lowerMesh];
+  const ruinDepth = createRuinDepthMaterial();
   for (const [parent, b, frame] of [[group, world, 'world'], [gridGroup, grid, 'grid']]) {
     for (const kind of Object.keys(kinds)) {
       for (const { geometry, certainty } of b[kind].toGeometries()) {
         const set = materials[kind];
         const mesh = new THREE.Mesh(geometry, set.base);
+        mesh.customDepthMaterial = ruinDepth;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.userData = { kind, certainty, frame };

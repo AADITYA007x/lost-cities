@@ -160,6 +160,7 @@ export function createWeather({ scene, camera, city, water, riverPoint, lowPower
   let flood = 0;
 
   return {
+    drainsMesh: drainWater,
     // jump straight to the settled state (when the page opens in the rain)
     settle({ rain, monsoon }) {
       wet = rain > 0.05 ? 1 : 0;

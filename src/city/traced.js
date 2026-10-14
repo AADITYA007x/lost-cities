@@ -47,6 +47,17 @@ export function loadTraces() {
     .filter(({ data }) => data && data.format === 'lost-cities-trace/1' && isCalibrated(data.calibration));
 }
 
+// Which moments of the city-through-time view a traced plan belongs to (a bit mask:
+// 1 founding, 2 height, 4 late, 8 buried, 16 today). Mackay drew DK-G one level at a
+// time: his Late levels show the city in decline, Intermediate I its height (and what
+// stands exposed today). Marshall's plans mix levels: shown from the height on.
+export function eraOfTrace(data) {
+  const level = data.meta?.level || '';
+  if (/late/i.test(level)) return 4;
+  if (/intermediate/i.test(level)) return 2 | 8 | 16;
+  return 2 | 4 | 8 | 16;
+}
+
 // Builds traced walls, drains and wells. Returns the areas they cover, so generated
 // houses there can be left out.
 export function buildTraced(traces, groundAt, out) {
@@ -55,6 +66,9 @@ export function buildTraced(traces, groundAt, out) {
 
   for (const { data } of traces) {
     const toScene = makeTransform(data.calibration);
+    const savedTag = out.walls.tag;
+    out.walls.tag = { era: eraOfTrace(data), build: 0, base: null };
+    out.walls.tag = { ...out.walls.tag };
     let x0 = Infinity;
     let x1 = -Infinity;
     let z0 = Infinity;
@@ -88,6 +102,7 @@ export function buildTraced(traces, groundAt, out) {
         const nx = dz * half;
         const nz = -dx * half;
         const y = groundAt((ax + bx) / 2, (az + bz) / 2);
+        out.walls.tag.base = y; // ruins are measured from the ground, for both parts of the wall
         const corners = (ya, yb) => [
           v(sx + nx, ya, sz + nz), v(ex + nx, ya, ez + nz), v(ex - nx, ya, ez - nz), v(sx - nx, ya, sz - nz),
           v(sx + nx, yb, sz + nz), v(ex + nx, yb, ez + nz), v(ex - nx, yb, ez - nz), v(sx - nx, yb, sz - nz),
@@ -124,6 +139,8 @@ export function buildTraced(traces, groundAt, out) {
       grow([x, z]);
       out.wells.push({ x, z, y: groundAt(x, z), cert: well.certainty === 'inferred' ? CERTAINTY.inferred : CERTAINTY.excavated });
     }
+
+    out.walls.tag = savedTag;
 
     if (x0 < x1) {
       covered.push({

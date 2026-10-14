@@ -55,6 +55,7 @@ export function createWalkMode(app) {
 
   function enter({ instant = false, firstStreet = false } = {}) {
     if (stage.walking || !walk) return;
+    app.beforeWalk?.();
     hint.textContent = 'Preparing the streets…';
     hint.classList.add('show');
     // let the message paint before the (short) collision build

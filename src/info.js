@@ -19,6 +19,8 @@ function lookup(city, hit) {
   const tracedAt = covered.find((c) => inRect(c, x, z));
   const rectShape = (r) => ({ rect: r });
 
+  if (ud.kind === 'mound') return { id: 'mound', shape: null };
+  if (ud.kind === 'stupa') return { id: 'stupa', shape: null };
   if (ud.kind === 'craft') return { id: `craft-${ud.craft}`, shape: null };
   if (ud.kind === 'walker') return { id: 'walkers', shape: null };
   if (ud.kind === 'pool' || inRect(plan.bath, x, z)) return { id: 'greatBath', shape: rectShape(plan.bath) };
@@ -65,6 +67,7 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const targets = [...city.pickables, ...terrainMeshes];
+  let hitFilter = () => true;
 
   // a soft gold outline around the chosen feature
   const outlineMat = new THREE.LineBasicMaterial({ color: '#e2bf72', transparent: true, opacity: 0, depthTest: false });
@@ -132,7 +135,7 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
     const r = canvas.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(targets, false).filter((h) => h.object.visible);
+    const hits = raycaster.intersectObjects(targets, false).filter((h) => h.object.visible && hitFilter(h));
     return hits[0] || null;
   }
 
@@ -165,6 +168,9 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       enabled = on;
     },
     close,
+    setHitFilter(fn) {
+      hitFilter = fn;
+    },
     addTargets(list) {
       targets.unshift(...list);
     },

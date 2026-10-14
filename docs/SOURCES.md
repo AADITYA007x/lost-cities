@@ -60,7 +60,8 @@ Not legal advice. This is a working summary so we make careful choices; when in 
 - **Mackay 1938, Vol. II (plates)**, Archive.org scan (in.gov.ignca.9954). The fold-out plans are scanned small: about 1,100-1,650 px across a whole plan, so lettering is hard to read but solid walls are clear.
   - **Plate I, site plan.** Lined up with the elevation data using the stupa as anchor and the scale bar (1.408 m per scan pixel). The mounds on the plan match the elevation data to within about 15 m. Used for: mound outlines, excavated areas, First Street, the Great Bath position.
   - **Plate XVIII, DK-G southern portion, Intermediate I period.** Scale from its 100 ft survey grid (0.1555 m per px); placed by matching its outline to the site plan; First Street lands within about 1 m of the site plan's line. Walls extracted automatically (solid black only), to be reviewed by hand.
-  - Plates VI, VII (SD area), XIII (DK-G northern portion) and XVI, XVII, XIX, XX (DK-G south at other levels) are not used yet. The other levels of DK-G are good material for the "city through time" slider.
+  - **Plate XX, DK-G southern portion, Late I and II periods.** Placed by overlaying it on Plate XVIII (same area and survey grid; best match at scale 0.99). Walls extracted automatically. Used for the late city in the time view.
+  - Plates VI, VII (SD area), XIII (DK-G northern portion) and XVI, XVII, XIX (DK-G south at other levels) are not used yet.
 - **Marshall 1931, Vol. III (plates)**, Archive.org scan in.gov.ignca.48270 (ASI copy). Fold-out plans scanned at 1,150-3,050 px across. Traced so far:
   - **XXXIX, HR area** (0.0622 m/px from its scale bar; placed by outline matching).
   - **LIII, VS area A and B** (0.0622 m/px; outline matching).

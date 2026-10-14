@@ -12,6 +12,8 @@ import { createDaytime } from './app/daytime.js';
 import { createWalkMode } from './app/walk-mode.js';
 import { createWeather } from './weather.js';
 import { createLife, CRAFT_LABELS } from './life.js';
+import { createEras } from './app/eras.js';
+import { createEraControl } from './era-control.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -57,6 +59,7 @@ function savePreference(sound) {
 let certainty = null;
 let weather = null;
 let life = null;
+let eras = null;
 let limit = () => {};
 
 // ---------- world ----------
@@ -92,6 +95,11 @@ async function init() {
   life = createLife({ city, groundAt, lowPower });
   scene.add(life.group);
   app.life = life;
+  app.drainsMesh = weather.drainsMesh;
+  app.lampsMesh = () => daytime.lampsMesh;
+  eras = createEras(app);
+  app.eras = eras;
+  app.info.setHitFilter((hit) => eras.visibleHit(hit));
   app.info.addTargets(life.pickables);
 
   const f = city.features;
@@ -128,6 +136,10 @@ async function init() {
   walkMode.setup();
   daytime.apply();
   weather.settle({ rain: daytime.rainLevel, monsoon: daytime.state.season === 'monsoon' });
+  const startEra = eras.ERAS.some((e) => e.id === params.get('era')) ? params.get('era') : 'height';
+  eras.set(startEra, { instant: true });
+  eraControl.show(startEra);
+  if (params.has('split')) eraControl.setSplit?.(true);
 
   // test views: ?view=bath, ?view=street, ?view=hr ... (start there, no intro)
   const presets = {
@@ -188,6 +200,7 @@ function begin(sound, instant = false) {
     app.labels.show(true);
     walkMode.show();
     daytime.show();
+    eraButton.hidden = false;
   };
 
   if (instant) {
@@ -203,6 +216,33 @@ opening.addEventListener('click', (event) => {
   if (!button || button.disabled || !app.world) return;
   begin(button.dataset.sound);
 });
+
+// ---------- the city through time ----------
+const eraButton = document.getElementById('era-button');
+const eraControl = createEraControl({
+  button: eraButton,
+  panel: document.getElementById('era-panel'),
+  splitEl: document.getElementById('split'),
+  onChange: (id) => {
+    if (!eras) return;
+    // walking happens in the living city; in the buried and excavated views, fly
+    if (stage.walking && (id === 'buried' || id === 'today')) walkMode.exit();
+    eras.set(id);
+    eraControl.show(id);
+  },
+  onSplit: () => {},
+});
+
+// only one of the two top panels is open at a time
+eraButton.addEventListener('click', () => document.getElementById('time-panel').classList.remove('open'));
+document.getElementById('time-button').addEventListener('click', () => eraControl.open(false));
+// walking starts in the living city: from the buried or excavated views, go back to its height
+app.beforeWalk = () => {
+  if (eras && (eras.current === 'buried' || eras.current === 'today')) {
+    eras.set('height');
+    eraControl.show('height');
+  }
+};
 
 // ---------- certainty switch ----------
 certaintyBox.addEventListener('click', (e) => {
@@ -263,12 +303,44 @@ stage.renderer.setAnimationLoop((now) => {
       day: THREE.MathUtils.clamp((light.elevation + 4) / 14, 0, 1),
       rain: daytime.rainLevel,
       evidence: app.city.certainty.mixUniform.value,
+      population: eras ? eras.population : 1,
     });
   }
+  eras?.update(dt);
   stage.sky.position.copy(camera.position);
   if (app.water) app.water.material.uniforms.uTime.value = t;
   app.labels?.update(camera);
   certainty?.update(dt);
   app.info?.update(dt);
-  stage.renderer.render(scene, camera);
+  renderFrame();
 });
+
+// one view, or two moments side by side (then and now) split at a draggable line
+function renderFrame() {
+  const { renderer } = stage;
+  if (!eras) {
+    renderer.render(scene, camera);
+    return;
+  }
+  eras.beginFrame();
+  if (eraControl.split) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const sx = Math.round(w * eraControl.fraction);
+    const left = eras.current === 'today' ? 'height' : eras.current;
+    renderer.setScissorTest(true);
+    renderer.setScissor(0, 0, sx, h);
+    eras.apply(left);
+    renderer.render(scene, camera);
+    renderer.setScissor(sx, 0, w - sx, h);
+    eras.apply('today');
+    renderer.render(scene, camera);
+    renderer.setScissorTest(false);
+  } else {
+    eras.apply();
+    renderer.render(scene, camera);
+  }
+  eras.endFrame();
+  // leave the scene set to the chosen moment (for clicks)
+  eras.apply();
+}

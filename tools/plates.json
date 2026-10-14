@@ -3,7 +3,7 @@
   "plates": [
     {
       "id": "mackay-xviii",
-      "label": "Mackay 1938 · Plate XVIII · DK-G south, Intermediate I",
+      "label": "Mackay 1938 \u00b7 Plate XVIII \u00b7 DK-G south, Intermediate I",
       "file": "mackay-1938/mackay-plate-XVIII-DK-G-south-intermediate-I.jpg",
       "out": "mackay-DK-G-plate-XVIII.json",
       "source": "Mackay 1938",
@@ -49,7 +49,7 @@
     },
     {
       "id": "marshall-xxxix",
-      "label": "Marshall 1931 · Plate XXXIX · HR area, A and B sections",
+      "label": "Marshall 1931 \u00b7 Plate XXXIX \u00b7 HR area, A and B sections",
       "file": "marshall-1931/marshall-plate-XXXIX-HR-A-B.jpg",
       "out": "marshall-HR-plate-XXXIX.json",
       "source": "Marshall 1931",
@@ -95,7 +95,7 @@
     },
     {
       "id": "marshall-liii",
-      "label": "Marshall 1931 · Plate LIII · VS area, A and B sections",
+      "label": "Marshall 1931 \u00b7 Plate LIII \u00b7 VS area, A and B sections",
       "file": "marshall-1931/marshall-plate-LIII-VS-A-B.jpg",
       "out": "marshall-VS-plate-LIII.json",
       "source": "Marshall 1931",
@@ -135,7 +135,7 @@
     },
     {
       "id": "marshall-xxii",
-      "label": "Marshall 1931 · Plate XXII · SD area, Great Bath",
+      "label": "Marshall 1931 \u00b7 Plate XXII \u00b7 SD area, Great Bath",
       "file": "marshall-1931/marshall-plate-XXII-SD-great-bath.jpg",
       "out": "marshall-SD-plate-XXII.json",
       "source": "Marshall 1931",
@@ -175,7 +175,7 @@
     },
     {
       "id": "marshall-xxx",
-      "label": "Marshall 1931 · Plate XXX · L area",
+      "label": "Marshall 1931 \u00b7 Plate XXX \u00b7 L area",
       "file": "marshall-1931/marshall-plate-XXX-L-area.jpg",
       "out": "marshall-L-plate-XXX.json",
       "source": "Marshall 1931",
@@ -210,6 +210,40 @@
           0,
           1309,
           60
+        ]
+      ]
+    },
+    {
+      "id": "mackay-xx",
+      "label": "Mackay 1938 \u00b7 Plate XX \u00b7 DK-G south, Late I and II",
+      "file": "mackay-1938/mackay-plate-XX-DK-G-south-late-I-II.jpg",
+      "out": "mackay-DK-G-plate-XX.json",
+      "source": "Mackay 1938",
+      "plate": "XX",
+      "page": "",
+      "area": "DK-G",
+      "level": "Late I and II",
+      "mPerPx": 0.15394,
+      "scaleFrom": "same survey as Plate XVIII; matched to it by overlaying the two plates (scale 0.99)",
+      "anchorPx": [
+        270.7,
+        670.7
+      ],
+      "anchorScene": [
+        -98.5,
+        -244.2
+      ],
+      "placedBy": "overlaid on Plate XVIII (same area, same survey grid)",
+      "dark": 95,
+      "minThick": 3,
+      "glyphs": 0,
+      "method": "lines",
+      "exclude": [
+        [
+          250,
+          700,
+          520,
+          880
         ]
       ]
     }

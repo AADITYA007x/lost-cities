@@ -393,7 +393,7 @@ export function createLife({ city, groundAt, lowPower }) {
     stations,
     pickables,
     // day: 0 night .. 1 full day; rain: 0..1; evidence: 0..1 (the certainty switch)
-    update(dt, t, { camera, day, rain, evidence }) {
+    update(dt, t, { camera, day, rain, evidence, population = 1 }) {
       const opacity = 1 - evidence;
       group.visible = opacity > 0.02;
       if (!group.visible) return;
@@ -402,7 +402,7 @@ export function createLife({ city, groundAt, lowPower }) {
         m.opacity = opacity;
       }
       // how many people are out: most by day, few at night, almost none in the rain
-      const outdoors = THREE.MathUtils.clamp(day * 1.2, 0.04, 1) * (1 - 0.95 * rain);
+      const outdoors = THREE.MathUtils.clamp(day * 1.2, 0.04, 1) * (1 - 0.95 * rain) * population;
       const working = day > 0.25 && rain < 0.35;
       const far = camera.position.y > 900;
       // pose about 30 times a second at most
@@ -432,7 +432,7 @@ export function createLife({ city, groundAt, lowPower }) {
           f.yaw = Math.atan2(ux * f.dir, uz * f.dir);
           f.stride += f.speed * step * 4.2;
         } else {
-          f.shown = working ? 1 : 0;
+          f.shown = working && f.threshold < population ? 1 : 0;
         }
         if (!f.shown || far || tmpV.set(f.x, f.y, f.z).distanceToSquared(camera.position) > 450 * 450) hideFigure(i);
         else placeFigure(i, f, t);

@@ -15,6 +15,7 @@
 - Mackay, E. J. H. 1938. *Further Excavations at Mohenjo-daro*. 2 vols. Delhi: Manager of Publications, Government of India.
   - Plate I (site plan): mound outlines, excavated areas and First Street, traced as coordinates.
   - Plate XVIII (DK area, G section, plan of the Intermediate I period): walls traced as coordinates.
+  - Plate XX (DK area, G section, plan of the Late I and II periods): walls traced as coordinates, for the late city in the time view.
   - Scans: Archaeological Survey of India / Central Archaeological Library copy, via the Digital Library of India on Archive.org. The scans themselves are not included in this project.
 
 Walls were picked out of the plan scans by `tools/autotrace.py` and are reviewed by hand in the plan tracer. Each plate's scale and placement is recorded in `tools/plates.json`.

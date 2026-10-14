@@ -262,6 +262,36 @@ export const FEATURES = {
 // One line about the exact piece that was clicked.
 Object.assign(FEATURES, CRAFT_FEATURES, { walkers: WALKERS_NOTE });
 
+// after the city: the mounds and the stupa (shown in the later moments of the time view)
+Object.assign(FEATURES, {
+  mound: {
+    title: 'The mounds',
+    kicker: 'After the city',
+    certainty: 'inferred',
+    what: 'Fallen brick, silt and windblown dust that slowly buried the abandoned city.',
+    known: [
+      'The two mounds still rise above the plain. Their surface is strewn with broken brick.',
+      'River floods have also raised the plain around them by several metres since the city was built.',
+    ],
+    debated: null,
+    here: 'The mounds follow the platforms\u2019 outline on the site plan; their shape and height are simplified.',
+    sources: ['marshall', 'jansen', 'copernicus'],
+  },
+  stupa: {
+    title: 'The stupa',
+    kicker: 'Citadel mound · much later',
+    certainty: 'inferred',
+    what: 'A Buddhist stupa of mud brick and baked brick, with a monastery beside it, built on top of the high mound.',
+    known: [
+      'It is usually dated to the Kushan period, around the 2nd century CE: more than two thousand years after the city.',
+      'Its ruin is what first drew R. D. Banerji to the site in 1922.',
+    ],
+    debated: 'A minority view argues that the mound under the stupa hides an older, Harappan building, and that the stupa is later work on top of it.',
+    here: 'A simplified form placed where the stupa stands on Mackay\u2019s site plan. The monastery beside it is left out.',
+    sources: ['marshall', 'kenoyer'],
+  },
+});
+
 export function elementLine(kind, certainty, { traced = false } = {}) {
   const c = ['excavated', 'inferred', 'imagined'][certainty] ?? 'inferred';
   switch (kind) {

@@ -104,6 +104,9 @@ export function createDaytime(app) {
     get rainLevel() {
       return rainLevel;
     },
+    get lampsMesh() {
+      return lamps?.mesh ?? null;
+    },
     get light() {
       return light;
     },

@@ -22,6 +22,7 @@ class Bucket {
     this.positions = [];
     this.normals = [];
     this.quad = [];
+    this.tags = []; // per vertex: eras it exists in (bit mask), building id 0..1, base height
     this.indices = [];
     this.count = 0;
   }
@@ -34,6 +35,11 @@ export class Batch {
     this.buckets = new Map();
     this.vertexCount = 0;
     this.footprints = collect ? [] : null;
+    // what the next pieces belong to, for the city-through-time view:
+    // era = bit mask of eras (1 founding, 2 height, 4 late, 8 buried, 16 today)
+    // build = a number 0..1 per building (which houses stand in thinner eras)
+    // base = ground level of the building (for ruins); null = the piece's own bottom
+    this.tag = { era: 31, build: 0, base: null };
   }
 
   bucket(certainty, x, z) {
@@ -62,6 +68,8 @@ export class Batch {
     const cx = (c[0].x + c[2].x) / 2;
     const cz = (c[0].z + c[2].z) / 2;
     const b = this.bucket(certainty, cx, cz);
+    const tg = this.tag;
+    const ground = tg.base ?? Math.min(c[0].y, c[1].y, c[2].y, c[3].y);
     if (this.footprints) {
       // [x0,z0, x1,z1, x2,z2, x3,z3, bottomY, topY]
       this.footprints.push([c[0].x, c[0].z, c[1].x, c[1].z, c[2].x, c[2].z, c[3].x, c[3].z, Math.min(c[0].y, c[1].y), c[4].y]);
@@ -82,6 +90,7 @@ export class Batch {
         b.positions.push(p.x, p.y, p.z);
         b.normals.push(n.x, n.y, n.z);
         b.quad.push(QUAD_UV[i * 2], QUAD_UV[i * 2 + 1]);
+        b.tags.push(tg.era, tg.build, ground);
       });
       b.indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
       b.count += 4;
@@ -128,6 +137,7 @@ export class Batch {
       g.setAttribute('position', new THREE.Float32BufferAttribute(b.positions, 3));
       g.setAttribute('normal', new THREE.Float32BufferAttribute(b.normals, 3));
       g.setAttribute('aQuad', new THREE.Float32BufferAttribute(b.quad, 2));
+      g.setAttribute('aTag', new THREE.Float32BufferAttribute(b.tags, 3));
       g.setIndex(b.count > 65535 ? new THREE.Uint32BufferAttribute(b.indices, 1) : new THREE.Uint16BufferAttribute(b.indices, 1));
       g.computeBoundingSphere();
       g.computeBoundingBox();

@@ -41,7 +41,7 @@ export const LANDSCAPE_NOTE = {
     {
       level: 'simplified',
       label: 'Left out',
-      text: 'The Buddhist stupa that tops the citadel mound today was built about two and a half thousand years after this moment, so it is not shown.',
+      text: 'The Buddhist stupa that tops the citadel mound today was built more than two thousand years after the city\u2019s height, so it appears only in the later moments of the time view (\u201cBuried\u201d and \u201cToday\u201d).',
     },
     {
       level: 'inferred',
@@ -52,6 +52,11 @@ export const LANDSCAPE_NOTE = {
       level: 'inferred',
       label: 'Sun and seasons',
       text: 'The sun\u2019s path is calculated for Mohenjo-daro\u2019s latitude, with the Earth\u2019s tilt as it was around 2500 BCE (about 24\u00b0, a little more than today\u2019s 23.4\u00b0). Times are sun times, not clock times. The seasons follow today\u2019s pattern at the site: a cool winter, a very hot early summer, the summer monsoon, and the clear months after it. Climate studies suggest the summer monsoon was somewhat stronger then and weakened over the following centuries; how much is debated. The colours of sky and haze are an impression, not a measurement.',
+    },
+    {
+      level: 'inferred',
+      label: 'Through time',
+      text: 'The time view shows five moments; all dates are approximate. The founding is the least known: its levels lie below the water table. For the late city, DK-G shows Mackay\u2019s plan of the Late levels; elsewhere which houses stand empty is imagined. The mounds of the buried city are simplified, and the stupa on top is a simplified form at its place on the site plan. In the view of today, walls are cut to one height; their real surviving height varies a great deal.',
     },
     {
       level: 'imagined',
