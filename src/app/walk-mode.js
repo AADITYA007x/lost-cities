@@ -140,12 +140,14 @@ export function createWalkMode(app) {
 
   // move the walker to the nearest open place by (x, z), with a short fade
   const fade = document.getElementById('walk-fade');
-  function jumpTo(x, z) {
+  function jumpTo(x, z, face = null) {
     const spot = collision?.nearestReachable(x, z, 120);
     if (!spot) return;
     fade.classList.add('on');
     setTimeout(() => {
-      walk.start(spot[0], spot[1], walk.yaw, walk.pitch);
+      // face a point if asked (a person to talk to), otherwise keep looking the same way
+      const yaw = face ? Math.atan2(-(face[0] - spot[0]), -(face[1] - spot[1])) : walk.yaw;
+      walk.start(spot[0], spot[1], yaw, face ? 0.12 : walk.pitch);
       setShadowsAround(spot[0], spot[1], true);
       fade.classList.remove('on');
     }, 220);
@@ -168,6 +170,12 @@ export function createWalkMode(app) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && stage.walking && !document.querySelector('.info-panel.open')) exit();
   });
+
+  app.walkPosition = () => walk.position;
+  app.walkJump = (x, z, face) => {
+    ensureCollision();
+    jumpTo(x, z, face);
+  };
 
   return {
     setup,

@@ -1,5 +1,7 @@
-// Cloudflare Worker: serves the built site from ./dist and handles /api/* routes.
-// For now only a health check. The Gemini chat proxy (/api/chat) arrives in milestone 11.
+// Cloudflare Worker: serves the built site from ./dist and handles /api/* routes:
+// /api/health (is the site and the chat set up?) and /api/chat (talk to a resident).
+
+import { handleChat } from './chat.js';
 
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -22,6 +24,10 @@ export default {
         chatConfigured: Boolean(env.GEMINI_API_KEY),
         time: new Date().toISOString(),
       });
+    }
+
+    if (url.pathname === '/api/chat') {
+      return handleChat(request, env, json);
     }
 
     if (url.pathname.startsWith('/api/')) {

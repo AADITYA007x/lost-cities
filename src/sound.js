@@ -266,6 +266,11 @@ export function createSound() {
       set(master.gain, on ? 0.9 : 0, on ? 1.2 : 0.4);
       if (!on) setTimeout(() => !on && ctx.suspend(), 1500);
     },
+    // quieter while someone speaks
+    duck(down) {
+      if (!ctx || !on) return;
+      set(master.gain, down ? 0.3 : 0.9, 0.4);
+    },
     // a snapshot of where we are and what is around us
     update(s) {
       if (!on || !ctx || ctx.state !== 'running') return;

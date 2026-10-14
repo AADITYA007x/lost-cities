@@ -37,3 +37,10 @@ Push to `main`. Cloudflare Workers Builds runs `npm run build` and `npx wrangler
 - [docs/ROADMAP.md](docs/ROADMAP.md) — milestones
 - [docs/SOURCES.md](docs/SOURCES.md) — sources and licences
 - [CREDITS.md](CREDITS.md) — credits
+
+## Talk to a resident (Gemini)
+- The chat runs through the Worker (`/api/chat`), so it only works with `npx wrangler dev` (http://localhost:8787) or on the live site, not with `npm run dev`.
+- Key: a Cloudflare secret `GEMINI_API_KEY` (Production); locally in the git-ignored `.dev.vars`. Optional variable `GEMINI_MODEL` (default `gemini-3.5-flash-lite`, with retries and fallback models).
+- The resident may only use the notes built from `src/content/` (see `worker/notes.js`). `?chat` opens the panel straight away.
+- Choosing a person takes you to them (a flight from above, or a short jump while walking).
+- Answers are read aloud with the browser's own voices (toggle "Read aloud"); the ambient sound dips while the resident speaks. The microphone button asks by voice where the browser supports it (Chrome and Edge, which send the audio to their own speech service). No extra libraries.

@@ -16,6 +16,10 @@ import { createEras } from './app/eras.js';
 import { createEraControl } from './era-control.js';
 import { createScriptExplorer } from './script-explorer.js';
 import { createSound } from './sound.js';
+import { createChat } from './chat.js';
+import { ERA_BY_ID } from './content/eras.js';
+import { SEASONS } from './daylight.js';
+import { PLACE_LABELS as NAMES } from './content/landscape.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -207,6 +211,7 @@ function begin(sound, instant = false) {
     eraButton.hidden = false;
     scriptButton.hidden = false;
     soundButton.hidden = false;
+    chatButton.hidden = false;
   };
 
   if (instant) {
@@ -291,6 +296,70 @@ function updateSound(dt, light) {
   };
   sound.update(lastSoundState);
 }
+
+// ---------- talk to a resident ----------
+const chatButton = document.getElementById('chat-button');
+// what the visitor is looking at, so the resident can mention it
+function chatContext() {
+  const ctx = {};
+  if (eras) {
+    const e = ERA_BY_ID[eras.current];
+    ctx.era = `${e.date}, ${e.title}`;
+  }
+  ctx.time = document.getElementById('time-button').textContent.trim();
+  ctx.season = SEASONS[daytime.state.season]?.label;
+  ctx.rain = daytime.rainLevel > 0.5;
+  if (app.city) {
+    const p = stage.walking && app.walkPosition ? app.walkPosition() : controls.target;
+    const f = app.city.features;
+    const named = [
+      [NAMES.greatBath, f.greatBath],
+      [NAMES.greatHall, f.greatHall],
+      [NAMES.firstStreet, f.firstStreet],
+      ...Object.entries(f.tracedAreas).map(([a, v]) => [`the ${a} area`, v]),
+      ...(life ? life.stations.map((st) => [`a workshop: ${st.craft}`, st.labelPos]) : []),
+    ];
+    let best = null;
+    for (const [name, v] of named) {
+      const d = Math.hypot(v.x - p.x, v.z - p.z);
+      if (d < 120 && (!best || d < best[1])) best = [name, d];
+    }
+    ctx.place = best ? best[0] : null;
+  }
+  return ctx;
+}
+// take the visitor to the person they talk to: the nearest workshop (or well) of that kind
+const PERSONA_CRAFT = { water: 'water', beads: 'beads', potter: 'potter' };
+function goToPerson(persona) {
+  if (!life || !app.world) return;
+  if (eras && (eras.current === 'buried' || eras.current === 'today')) {
+    eras.set('height');
+    eraControl.show('height');
+  }
+  const here = stage.walking && app.walkPosition ? app.walkPosition() : controls.target;
+  const list = life.stations.filter((st) => st.craft === PERSONA_CRAFT[persona]);
+  if (!list.length) return;
+  const st = list.reduce((a, b) => (Math.hypot(a.x - here.x, a.z - here.z) <= Math.hypot(b.x - here.x, b.z - here.z) ? a : b));
+  // in front of the worker (they face +z in their own frame)
+  const fx = Math.sin(st.yaw);
+  const fz = Math.cos(st.yaw);
+  if (stage.walking && app.walkJump) {
+    app.walkJump(st.x + fx * 2.4, st.z + fz * 2.4, [st.x, st.z]);
+    return;
+  }
+  const target = new THREE.Vector3(st.x, st.y + 0.7, st.z);
+  const position = target.clone().add(new THREE.Vector3(fx * 9 + fz * 3, 7, fz * 9 - fx * 3));
+  controls.enabled = false;
+  flight.to({ position, target, duration: 3.5 }, () => (controls.enabled = true));
+}
+const chat = createChat({
+  panel: document.getElementById('chat-panel'),
+  button: chatButton,
+  getContext: chatContext,
+  onPersona: goToPerson,
+  onSpeaking: (on) => sound.duck(on),
+});
+if (params.has('chat')) setTimeout(() => chat.open(true), 500);
 
 // ---------- the Indus script ----------
 const scriptButton = document.getElementById('script-button');

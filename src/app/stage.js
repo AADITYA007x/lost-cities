@@ -48,7 +48,7 @@ export function createStage({ lowPower }) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
   controls.screenSpacePanning = false;
-  controls.minDistance = 25;
+  controls.minDistance = 8;
   controls.maxDistance = 3400;
   controls.maxPolarAngle = THREE.MathUtils.degToRad(80);
   controls.rotateSpeed = 0.5;
