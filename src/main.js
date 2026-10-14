@@ -14,6 +14,7 @@ import { createWeather } from './weather.js';
 import { createLife, CRAFT_LABELS } from './life.js';
 import { createEras } from './app/eras.js';
 import { createEraControl } from './era-control.js';
+import { createScriptExplorer } from './script-explorer.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -201,6 +202,7 @@ function begin(sound, instant = false) {
     walkMode.show();
     daytime.show();
     eraButton.hidden = false;
+    scriptButton.hidden = false;
   };
 
   if (instant) {
@@ -232,6 +234,15 @@ const eraControl = createEraControl({
   },
   onSplit: () => {},
 });
+
+// ---------- the Indus script ----------
+const scriptButton = document.getElementById('script-button');
+const script = createScriptExplorer({ panel: document.getElementById('script-panel'), button: scriptButton });
+window.addEventListener('open-script', () => {
+  app.info?.close();
+  script.open(true);
+});
+if (params.has('script')) setTimeout(() => script.open(true), 500);
 
 // only one of the two top panels is open at a time
 eraButton.addEventListener('click', () => document.getElementById('time-panel').classList.remove('open'));

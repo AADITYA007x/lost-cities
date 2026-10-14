@@ -110,6 +110,7 @@ export const CRAFT_FEATURES = Object.fromEntries(
       debated: c.debated,
       here: `${WHERE} ${WHO} The figures are simple stand-ins: how people dressed and wore their hair is known only from a few figurines, so their look is imagined.`,
       sources: c.sources,
+      link: id === 'seals' ? { label: 'Explore the Indus script', event: 'open-script' } : null,
     },
   ])
 );

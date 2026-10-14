@@ -119,9 +119,11 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       <h3>What you see here</h3>
       <p>${f.here}</p>
       ${line ? `<p class="info-element ${lvl}"><span></span>${line}</p>` : ''}
+      ${f.link ? `<button type="button" class="info-link" data-event="${f.link.event}">${f.link.label}</button>` : ''}
       ${f.sources.length ? `<h3>Sources</h3><ul class="sources">${list(f.sources.map((k) => SOURCES[k]))}</ul>` : ''}
     `;
     panel.querySelector('.close').addEventListener('click', close);
+    panel.querySelector('.info-link')?.addEventListener('click', (e) => window.dispatchEvent(new CustomEvent(e.currentTarget.dataset.event)));
     panel.classList.add('open');
     panel.scrollTop = 0;
   }

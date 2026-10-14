@@ -26,3 +26,7 @@ Walls were picked out of the plan scans by `tools/autotrace.py` and are reviewed
   - The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.
 
 Every later source is listed here and next to the item it supports in the app.
+
+## Indus script explorer
+- The signs and the example seal are simple redrawings made for this project. They copy no published sign list, photograph or seal; the example inscription is an invented line of common signs.
+- Facts and proposals are cited from: Parpola 1994 (*Deciphering the Indus Script*); Mahadevan 1977 (*The Indus Script: Texts, Concordance and Tables*); Wells 2015 (*The Archaeology and Epigraphy of Indus Writing*); Farmer, Sproat and Witzel 2004 (*Electronic Journal of Vedic Studies* 11-2); Rao and others 2009 (*Science* 324); Kenoyer 1998.
