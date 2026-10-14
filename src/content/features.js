@@ -1,6 +1,8 @@
 // Notes for the info panel: what each feature was, what we know, what is debated,
 // and what the visitor is actually looking at. Plain language; sources per item.
 
+import { CRAFT_FEATURES, WALKERS_NOTE } from './crafts.js';
+
 export const SOURCES = {
   marshall: 'Marshall, J. (ed.) 1931. Mohenjo-daro and the Indus Civilization. 3 vols. London: Probsthain.',
   mackay: 'Mackay, E. J. H. 1938. Further Excavations at Mohenjo-daro. 2 vols. Delhi: Government of India.',
@@ -258,6 +260,8 @@ export const FEATURES = {
 };
 
 // One line about the exact piece that was clicked.
+Object.assign(FEATURES, CRAFT_FEATURES, { walkers: WALKERS_NOTE });
+
 export function elementLine(kind, certainty, { traced = false } = {}) {
   const c = ['excavated', 'inferred', 'imagined'][certainty] ?? 'inferred';
   switch (kind) {
@@ -277,6 +281,10 @@ export function elementLine(kind, certainty, { traced = false } = {}) {
       return [c, c === 'excavated' ? 'This well is on the excavation plan.' : 'This well is part of a generated house.'];
     case 'pool':
       return ['excavated', 'The pool’s size is published; the water in it is imagined.'];
+    case 'craft':
+      return ['imagined', 'The craft is known from finds here; this figure and where it works are imagined.'];
+    case 'walker':
+      return ['imagined', 'This figure is imagined.'];
     case 'platform':
       return ['inferred', 'The platform’s outline follows the site plan, simplified; its height is approximate.'];
     default:

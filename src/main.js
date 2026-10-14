@@ -11,6 +11,7 @@ import { createStage } from './app/stage.js';
 import { createDaytime } from './app/daytime.js';
 import { createWalkMode } from './app/walk-mode.js';
 import { createWeather } from './weather.js';
+import { createLife, CRAFT_LABELS } from './life.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -55,6 +56,7 @@ function savePreference(sound) {
 
 let certainty = null;
 let weather = null;
+let life = null;
 let limit = () => {};
 
 // ---------- world ----------
@@ -87,6 +89,11 @@ async function init() {
     groundAt,
   });
 
+  life = createLife({ city, groundAt, lowPower });
+  scene.add(life.group);
+  app.life = life;
+  app.info.addTargets(life.pickables);
+
   const f = city.features;
   const siteCenter = f.citadel.clone().lerp(f.lowerTown, 0.5);
   siteCenter.y = groundAt(siteCenter.x, siteCenter.z);
@@ -106,6 +113,7 @@ async function init() {
     { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900 },
     { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500 },
     { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500 },
+    ...life.stations.map((st) => ({ text: CRAFT_LABELS[st.craft], position: st.labelPos, lift: 0.3, near: 0, far: 160 })),
     ...Object.entries(f.tracedAreas).map(([area, p]) => ({
       text: `${area} · walls from the excavation plan`,
       position: p,
@@ -131,6 +139,9 @@ async function init() {
         { target: p.clone(), offset: new THREE.Vector3(25, 40, 55) },
       ])
     ),
+    craft: life.stations.length
+      ? { target: life.stations[0].labelPos.clone().setY(life.stations[0].y), offset: new THREE.Vector3(6, 9, 8) }
+      : null,
     street: { target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 120)), offset: new THREE.Vector3(4, 24, 75) },
   };
   const preset = presets[params.get('view')];
@@ -246,6 +257,14 @@ stage.renderer.setAnimationLoop((now) => {
     monsoon: daytime.state.season === 'monsoon',
     light: light ? THREE.MathUtils.clamp((light.elevation + 6) / 20, 0, 1) : 1,
   });
+  if (life && light) {
+    life.update(dt, t, {
+      camera,
+      day: THREE.MathUtils.clamp((light.elevation + 4) / 14, 0, 1),
+      rain: daytime.rainLevel,
+      evidence: app.city.certainty.mixUniform.value,
+    });
+  }
   stage.sky.position.copy(camera.position);
   if (app.water) app.water.material.uniforms.uTime.value = t;
   app.labels?.update(camera);

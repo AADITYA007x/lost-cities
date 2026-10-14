@@ -66,7 +66,7 @@ function wellMeshes(wells, brick) {
   return [rings, pools];
 }
 
-const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [], lamps: [] });
+const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [], lamps: [], yards: [], courts: [] });
 
 export function buildCity({ lowPower = false } = {}) {
   const rng = createRng(2500);
@@ -96,6 +96,7 @@ export function buildCity({ lowPower = false } = {}) {
   const insideLower = (l) => corners(l).every(([x, z]) => pointInPolygon(x, z, lower.outline));
   const worldBox = (l) => boundsOf(corners(l));
   const isCovered = (l) => covered.some((c) => overlaps(worldBox(l), c, 1));
+  const isKnownAt = (x, z) => EXCAVATED_AREAS.some((a) => x >= a.x0 && x <= a.x1 && z >= a.z0 && z <= a.z1);
   const isKnown = (l) => {
     const [cx, cz] = gridToScene((l.x0 + l.x1) / 2, (l.z0 + l.z1) / 2);
     return EXCAVATED_AREAS.some((a) => cx >= a.x0 && cx <= a.x1 && cz >= a.z0 && cz <= a.z1);
@@ -106,7 +107,11 @@ export function buildCity({ lowPower = false } = {}) {
   for (const block of blocks) {
     for (const lot of subdivide(block, rng)) {
       if (!insideLower(lot)) continue;
-      if (rng.chance(0.04)) continue; // a few open yards
+      if (rng.chance(0.04)) {
+        // a few open yards (some become workshops in the life layer)
+        if (insideLower(lot) && !isCovered(lot)) grid.yards.push({ ...lot });
+        continue;
+      }
       if (isCovered(lot)) continue; // traced houses stand here instead
       buildHouse(lot, lower.y, rng, grid, { known: isKnown(lot), detail });
       houseCount++;
@@ -228,6 +233,22 @@ export function buildCity({ lowPower = false } = {}) {
       return { ...w, x, z };
     }),
   ];
+  // open yards and courtyards of generated houses, and street centre lines (scene
+  // coordinates; yaw is the grid's turn), for people going about their day
+  const toScene = (r) => {
+    const [x, z] = gridToScene((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2);
+    return { x, z, w: r.x1 - r.x0, d: r.z1 - r.z0, yaw: GRID.angle, known: isKnownAt(x, z) };
+  };
+  const yards = grid.yards.map(toScene);
+  const courts = grid.courts.map(toScene);
+  const streets = streetSpans.map((st) => ({
+    id: st.id,
+    width: st.width,
+    a: st.axis === 'ns' ? gridToScene(st.at, st.span[0]) : gridToScene(st.span[0], st.at),
+    b: st.axis === 'ns' ? gridToScene(st.at, st.span[1]) : gridToScene(st.span[1], st.at),
+    y: lower.y,
+  }));
+
   // imagined evening lamps in generated houses (scene coordinates)
   const lamps = [
     ...world.lamps,
@@ -308,6 +329,10 @@ export function buildCity({ lowPower = false } = {}) {
     firstStreetSpan: first ? first.span : null,
     lamps,
     drains,
+    yards,
+    courts,
+    streets,
+    wellsForLife: wells.filter((w) => w.cert !== CERTAINTY.excavated),
     // for walking: wall footprints (grid ones are in First Street's frame), wells, the pool
     obstacles: {
       world: world.walls.footprints,

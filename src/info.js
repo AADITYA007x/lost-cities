@@ -19,6 +19,8 @@ function lookup(city, hit) {
   const tracedAt = covered.find((c) => inRect(c, x, z));
   const rectShape = (r) => ({ rect: r });
 
+  if (ud.kind === 'craft') return { id: `craft-${ud.craft}`, shape: null };
+  if (ud.kind === 'walker') return { id: 'walkers', shape: null };
   if (ud.kind === 'pool' || inRect(plan.bath, x, z)) return { id: 'greatBath', shape: rectShape(plan.bath) };
   if (inRect(plan.hall, x, z)) return { id: 'greatHall', shape: rectShape(plan.hall) };
   if (inRect(plan.pillared, x, z)) return { id: 'pillaredHall', shape: rectShape(plan.pillared) };
@@ -163,6 +165,9 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       enabled = on;
     },
     close,
+    addTargets(list) {
+      targets.unshift(...list);
+    },
     showOutlines(on) {
       outlinesOn = on;
       if (!on) setOutline(null);

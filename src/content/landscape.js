@@ -54,6 +54,11 @@ export const LANDSCAPE_NOTE = {
       text: 'The sun\u2019s path is calculated for Mohenjo-daro\u2019s latitude, with the Earth\u2019s tilt as it was around 2500 BCE (about 24\u00b0, a little more than today\u2019s 23.4\u00b0). Times are sun times, not clock times. The seasons follow today\u2019s pattern at the site: a cool winter, a very hot early summer, the summer monsoon, and the clear months after it. Climate studies suggest the summer monsoon was somewhat stronger then and weakened over the following centuries; how much is debated. The colours of sky and haze are an impression, not a measurement.',
     },
     {
+      level: 'imagined',
+      label: 'People',
+      text: 'The crafts shown are known from finds at Mohenjo-daro: stone beads, shell bangles, pottery, seals, cotton thread, copper and bronze, grinding grain, drawing water. Where each workshop stands, who did the work, how many people walked the streets and how they looked are imagined. The figures are deliberately simple stand-ins.',
+    },
+    {
       level: 'inferred',
       label: 'Monsoon',
       text: 'The city\u2019s covered drains are well known: brick channels along the streets, fed by drains from the houses, with soak pits to catch silt. In the rain, water is drawn running along the street drains so you can see it; in reality most of it ran under the covers. The direction of flow in each drain is inferred. The Indus flooded every summer, which is one reason the city stood on high platforms; the river rising here by about a metre is an illustration, not a model of a real flood.',

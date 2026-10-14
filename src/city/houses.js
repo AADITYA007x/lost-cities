@@ -91,6 +91,8 @@ export function buildHouse(lot, y, rng, out, { known, detail }) {
   const cx1 = Math.min(cx0 + cw, ix1 - 2.6);
   const cz1 = Math.min(cz0 + cd, iz1 - 2.6);
 
+  if (out.courts) out.courts.push({ x0: cx0, x1: cx1, z0: cz0, z1: cz1 });
+
   // walls around the courtyard, each with a doorway
   wallWithDoor(walls, 'x', cx0 - t, cx1 + t, cz0 - t, cz0, y, H, cx0 + (cx1 - cx0) * 0.4, wallCert);
   wallWithDoor(walls, 'x', cx0 - t, cx1 + t, cz1, cz1 + t, y, H, cx0 + (cx1 - cx0) * 0.5, wallCert);

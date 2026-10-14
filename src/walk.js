@@ -135,10 +135,10 @@ export function createWalk({ camera, canvas, groundAt, onPlatform, joystickEl })
       collision = c;
     },
     // place the walker; returns the camera pose to fly to
-    start(x, z, yawStart) {
+    start(x, z, yawStart, pitchStart = -0.04) {
       pos.set(x, groundAt(x, z), z);
       yaw = yawStart;
-      pitch = -0.04;
+      pitch = pitchStart;
       return this.pose();
     },
     pose() {
