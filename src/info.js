@@ -16,13 +16,17 @@ function lookup(city, hit) {
   const { x, z } = hit.point;
   const ud = hit.object.userData || {};
   const { plan, covered, rects } = city;
-  const tracedAt = covered.find((c) => inRect(c, x, z));
+  // generated houses (in the grid frame) can stand inside a plan's rectangle, in its empty corners
+  const tracedAt = ud.frame === 'grid' ? null : covered.find((c) => inRect(c, x, z));
   const rectShape = (r) => ({ rect: r });
 
   if (ud.kind === 'mound') return { id: 'mound', shape: null };
   if (ud.kind === 'stupa') return { id: 'stupa', shape: null };
   if (ud.kind === 'craft') return { id: `craft-${ud.craft}`, shape: null };
   if (ud.kind === 'walker') return { id: 'walkers', shape: null };
+  if (ud.kind === 'drains') return { id: 'drain', shape: null };
+  if (ud.kind === 'cart') return { id: 'cart', shape: null };
+  if (ud.kind === 'fields' || ud.kind === 'trees') return { id: 'fields', shape: null };
   if (ud.kind === 'pool' || inRect(plan.bath, x, z)) return { id: 'greatBath', shape: rectShape(plan.bath) };
   if (inRect(plan.hall, x, z)) return { id: 'greatHall', shape: rectShape(plan.hall) };
   if (inRect(plan.pillared, x, z)) return { id: 'pillaredHall', shape: rectShape(plan.pillared) };
@@ -104,7 +108,8 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
   function render(found, hit) {
     const f = FEATURES[found.id];
     if (!f) return;
-    const [lvl, line] = elementLine(hit.object.userData?.kind, certaintyOf(hit), { traced: Boolean(found.traced) }) || [null, null];
+    // a line about the exact piece clicked (not when opened from the guide)
+    const [lvl, line] = (hit && elementLine(hit.object.userData?.kind, certaintyOf(hit), { traced: Boolean(found.traced) })) || [null, null];
     const list = (items) => items.map((t) => `<li>${t}</li>`).join('');
     panel.innerHTML = `
       <div class="info-head">
@@ -137,7 +142,12 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
     const r = canvas.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(targets, false).filter((h) => h.object.visible && hitFilter(h));
+    // only what is shown: the object and every group it sits in
+    const shown = (o) => {
+      for (; o; o = o.parent) if (!o.visible) return false;
+      return true;
+    };
+    const hits = raycaster.intersectObjects(targets, false).filter((h) => shown(h.object) && hitFilter(h));
     return hits[0] || null;
   }
 
@@ -156,7 +166,7 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
     if (!hit) return close();
     const found = lookup(city, hit);
     // whether the clicked piece lies on a traced plan matters for what we say about it
-    if (!found.traced) found.traced = city.covered.find((c) => inRect(c, hit.point.x, hit.point.z)) || null;
+    if (!found.traced && hit.object.userData?.frame !== 'grid') found.traced = city.covered.find((c) => inRect(c, hit.point.x, hit.point.z)) || null;
     render(found, hit);
     setOutline(found.shape);
   });
@@ -170,6 +180,12 @@ export function createInfo({ canvas, camera, scene, city, terrainMeshes, panel, 
       enabled = on;
     },
     close,
+    // open a feature's panel directly (from the guide), with its outline if it has one
+    show(id, shape = null) {
+      if (!FEATURES[id]) return;
+      render({ id }, null);
+      setOutline(shape);
+    },
     setHitFilter(fn) {
       hitFilter = fn;
     },

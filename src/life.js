@@ -219,7 +219,7 @@ export function createLife({ city, groundAt, lowPower }) {
   }
   const pathLen = (p) => Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]) * (p.first ? 2.5 : 1);
   const total = paths.reduce((s, p) => s + pathLen(p), 0);
-  const walkerCount = lowPower ? 45 : 90;
+  const walkerCount = lowPower ? 80 : 170;
   for (let i = 0; i < walkerCount && paths.length; i++) {
     let r = rng() * total;
     let path = paths[0];
@@ -392,6 +392,7 @@ export function createLife({ city, groundAt, lowPower }) {
     group,
     stations,
     pickables,
+    paths,
     // day: 0 night .. 1 full day; rain: 0..1; evidence: 0..1 (the certainty switch)
     update(dt, t, { camera, day, rain, evidence, population = 1 }) {
       const opacity = 1 - evidence;
@@ -404,7 +405,7 @@ export function createLife({ city, groundAt, lowPower }) {
       // how many people are out: most by day, few at night, almost none in the rain
       const outdoors = THREE.MathUtils.clamp(day * 1.2, 0.04, 1) * (1 - 0.95 * rain) * population;
       const working = day > 0.25 && rain < 0.35;
-      const far = camera.position.y > 900;
+      const far = camera.position.y > 1400;
       // pose about 30 times a second at most
       if (t - lastPose < 1 / 30) return;
       const step = lastPose < 0 ? 0 : t - lastPose;
@@ -434,7 +435,7 @@ export function createLife({ city, groundAt, lowPower }) {
         } else {
           f.shown = working && f.threshold < population ? 1 : 0;
         }
-        if (!f.shown || far || tmpV.set(f.x, f.y, f.z).distanceToSquared(camera.position) > 450 * 450) hideFigure(i);
+        if (!f.shown || far || tmpV.set(f.x, f.y, f.z).distanceToSquared(camera.position) > 700 * 700) hideFigure(i);
         else placeFigure(i, f, t);
       });
       wheels.forEach((w, k) => {

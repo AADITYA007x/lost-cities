@@ -20,6 +20,12 @@ import { createChat } from './chat.js';
 import { ERA_BY_ID } from './content/eras.js';
 import { SEASONS } from './daylight.js';
 import { PLACE_LABELS as NAMES } from './content/landscape.js';
+import { createGuide } from './guide.js';
+import { createBustle } from './bustle.js';
+import { createWaterMarkers } from './water-markers.js';
+import { FEATURES } from './content/features.js';
+import { TOUR, PLACE_GROUPS, SEARCH_WORDS } from './content/tour.js';
+import { EXCAVATED_AREAS, FIRST_STREET, fromSitePlan } from './city/layout.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -66,6 +72,8 @@ let certainty = null;
 let weather = null;
 let life = null;
 let eras = null;
+let bustle = null;
+let markers = null;
 let limit = () => {};
 
 // ---------- world ----------
@@ -111,6 +119,26 @@ async function init() {
   const f = city.features;
   const siteCenter = f.citadel.clone().lerp(f.lowerTown, 0.5);
   siteCenter.y = groundAt(siteCenter.x, siteCenter.z);
+
+  // the busy city: smoke, birds, carts, cloth on roofs, fields and trees (imagined)
+  bustle = createBustle({ city, world: { terrain, siteCenter, groundAt }, life, lowPower });
+  scene.add(bustle.group);
+  app.info.addTargets(bustle.pickables);
+  app.bustle = bustle;
+  // marks that show every well or drain, from the guide
+  const allWells = [];
+  city.group.traverse((o) => {
+    if (o.isInstancedMesh && o.userData.kind === 'well' && o.material !== undefined && o.geometry.attributes.aCertainty) {
+      const m = new THREE.Matrix4();
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, m);
+        allWells.push({ x: m.elements[12], y: m.elements[13], z: m.elements[14] });
+      }
+    }
+  });
+  markers = createWaterMarkers({ wells: allWells, drainLines: city.drainLines });
+  scene.add(markers.group);
+  app.markers = markers;
   stage.sun.target.position.copy(siteCenter);
 
   // Seen from the south: the citadel on the left, the lower town in the middle, the river to the right.
@@ -212,6 +240,8 @@ function begin(sound, instant = false) {
     scriptButton.hidden = false;
     soundButton.hidden = false;
     chatButton.hidden = false;
+    guideButton.hidden = false;
+    if (params.has('tour')) guide.startTour();
   };
 
   if (instant) {
@@ -328,30 +358,77 @@ function chatContext() {
   }
   return ctx;
 }
-// take the visitor to the person they talk to: the nearest workshop (or well) of that kind
-const PERSONA_CRAFT = { water: 'water', beads: 'beads', potter: 'potter' };
-function goToPerson(persona) {
-  if (!life || !app.world) return;
-  if (eras && (eras.current === 'buried' || eras.current === 'today')) {
-    eras.set('height');
-    eraControl.show('height');
+// fly the camera somewhere (leaving walk mode first if asked)
+function flyTo({ position, target }, { duration = 3.5, leaveWalk = true } = {}) {
+  if (stage.walking) {
+    if (!leaveWalk) return;
+    walkMode.exit();
   }
+  controls.enabled = false;
+  flight.to({ position, target, duration }, () => {
+    controls.enabled = true;
+    app.labels?.show(true);
+  });
+}
+function setEra(id) {
+  if (!eras || eras.current === id) return;
+  if (stage.walking && (id === 'buried' || id === 'today')) walkMode.exit();
+  eras.set(id);
+  eraControl.show(id);
+}
+function setMode(mode) {
+  if (certainty && certainty.mode !== mode) certaintyBox.querySelector(`[data-mode=${mode}]`).click();
+}
+const living = () => (eras && (eras.current === 'buried' || eras.current === 'today') ? 'height' : eras?.current);
+
+// the nearest workshop (or well) of a craft, and a view of its worker
+function nearestStation(craft) {
   const here = stage.walking && app.walkPosition ? app.walkPosition() : controls.target;
-  const list = life.stations.filter((st) => st.craft === PERSONA_CRAFT[persona]);
-  if (!list.length) return;
-  const st = list.reduce((a, b) => (Math.hypot(a.x - here.x, a.z - here.z) <= Math.hypot(b.x - here.x, b.z - here.z) ? a : b));
+  const list = life ? life.stations.filter((st) => st.craft === craft) : [];
+  if (!list.length) return null;
+  return list.reduce((a, b) => (Math.hypot(a.x - here.x, a.z - here.z) <= Math.hypot(b.x - here.x, b.z - here.z) ? a : b));
+}
+function goToStation(craft, { walkJump = true } = {}) {
+  if (!app.world) return;
+  setEra(living());
+  const st = nearestStation(craft);
+  if (!st) return;
   // in front of the worker (they face +z in their own frame)
   const fx = Math.sin(st.yaw);
   const fz = Math.cos(st.yaw);
-  if (stage.walking && app.walkJump) {
+  if (stage.walking && walkJump && app.walkJump) {
     app.walkJump(st.x + fx * 2.4, st.z + fz * 2.4, [st.x, st.z]);
     return;
   }
   const target = new THREE.Vector3(st.x, st.y + 0.7, st.z);
-  const position = target.clone().add(new THREE.Vector3(fx * 9 + fz * 3, 7, fz * 9 - fx * 3));
-  controls.enabled = false;
-  flight.to({ position, target, duration: 3.5 }, () => (controls.enabled = true));
+  flyTo({ position: clearViewOf(target, st.yaw), target });
 }
+// a camera spot that sees the worker over the walls and roofs around: try angles
+// around the front of the worker, then a steeper view from above
+const sightRay = new THREE.Raycaster();
+function clearViewOf(target, yaw) {
+  const blockers = app.city.pickables.filter((m) => m.userData.kind === 'walls' || m.userData.kind === 'roofs');
+  const head = target.clone().setY(target.y + 0.8);
+  const dir = new THREE.Vector3();
+  const tries = [];
+  for (const [dist, up] of [[10, 9], [8, 13], [5, 18]]) {
+    for (let k = 0; k < 12; k++) {
+      // 0, +30°, −30°, +60°, …: nearest to the front first
+      const a = yaw + (Math.ceil(k / 2) * (k % 2 ? 1 : -1) * Math.PI) / 6 + 0.3;
+      tries.push(target.clone().add(new THREE.Vector3(Math.sin(a) * dist, up, Math.cos(a) * dist)));
+    }
+  }
+  for (const pos of tries) {
+    const d = pos.distanceTo(head);
+    sightRay.set(head, dir.subVectors(pos, head).normalize());
+    sightRay.far = d;
+    if (!sightRay.intersectObjects(blockers, false).some((h) => h.object.visible)) return pos;
+  }
+  return target.clone().add(new THREE.Vector3(2, 22, 3));
+}
+// take the visitor to the person they talk to
+const PERSONA_CRAFT = { water: 'water', beads: 'beads', potter: 'potter' };
+const goToPerson = (persona) => goToStation(PERSONA_CRAFT[persona]);
 const chat = createChat({
   panel: document.getElementById('chat-panel'),
   button: chatButton,
@@ -360,6 +437,175 @@ const chat = createChat({
   onSpeaking: (on) => sound.duck(on),
 });
 if (params.has('chat')) setTimeout(() => chat.open(true), 500);
+
+// ---------- the guide: a tour, and places to fly to ----------
+const guideButton = document.getElementById('guide-button');
+// where each place is seen from: a target, an offset for the camera, and an outline
+function placeView(id) {
+  const { city, world } = app;
+  const f = city.features;
+  const g = world.groundAt;
+  const at = (x, z, lift = 0) => new THREE.Vector3(x, g(x, z) + lift, z);
+  const rectView = (r, k = 1) => {
+    const size = Math.max(r.x1 - r.x0, r.z1 - r.z0) * k;
+    const c = at((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2);
+    return { target: c, offset: new THREE.Vector3(0.3, 0.6, 0.85).multiplyScalar(Math.max(60, size)), shape: { rect: r } };
+  };
+  const covered = (area) => {
+    const list = city.covered.filter((c) => c.area === area);
+    if (!list.length) return null;
+    return {
+      x0: Math.min(...list.map((c) => c.x0)),
+      x1: Math.max(...list.map((c) => c.x1)),
+      z0: Math.min(...list.map((c) => c.z0)),
+      z1: Math.max(...list.map((c) => c.z1)),
+    };
+  };
+  const excavated = (areaId) => EXCAVATED_AREAS.find((a) => a.id === areaId);
+  const { plan, rects } = city;
+  switch (id) {
+    case 'overview':
+      return { position: app.home.position, target: app.home.target };
+    case 'citadel':
+      return { target: f.citadel.clone(), offset: new THREE.Vector3(230, 300, 470), shape: { poly: rects.citadel.outline } };
+    case 'lowerTown':
+      return { target: f.lowerTown.clone(), offset: new THREE.Vector3(180, 420, 700), shape: { poly: rects.lowerTown.outline } };
+    case 'greatBath':
+      return { target: f.greatBath.clone().setY(f.citadel.y), offset: new THREE.Vector3(70, 65, 110), shape: { rect: plan.bath } };
+    case 'greatHall':
+      return { ...rectView(plan.hall, 1.6) };
+    case 'college':
+      return { ...rectView(plan.college, 1.6) };
+    case 'pillaredHall':
+      return { ...rectView(plan.pillared, 1.8) };
+    case 'firstStreet':
+      return {
+        target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 120)),
+        offset: new THREE.Vector3(4, 24, 75),
+        shape: { line: [FIRST_STREET.north, FIRST_STREET.south] },
+      };
+    case 'area-HR':
+    case 'area-VS':
+    case 'area-DK-G':
+    case 'area-L': {
+      const r = covered(id.slice(5)) || excavated(id.slice(5));
+      return r ? rectView(r, 0.9) : null;
+    }
+    case 'area-SD':
+      return rectView(excavated('SD'), 0.9);
+    case 'area-DK':
+      return rectView(excavated('DK-B/C'), 0.9);
+    case 'river': {
+      const p = world.terrain.places.river;
+      return { target: at(p.x, p.z), offset: new THREE.Vector3(250, 420, 700) };
+    }
+    case 'mound':
+      return { target: world.siteCenter.clone(), offset: new THREE.Vector3(-60, 420, 820), era: 'buried' };
+    case 'stupa': {
+      const [x, z] = fromSitePlan(340, 462);
+      return { target: at(x, z, 4), offset: new THREE.Vector3(60, 55, 95), era: 'today' };
+    }
+    case 'well': {
+      // an excavated well on a traced plan, near First Street's south end
+      const list = [];
+      city.group.traverse((o) => {
+        // the plans' wells first (excavated or inferred), else any
+        if (o.isInstancedMesh && o.userData.kind === 'well' && o.geometry.attributes.aCertainty) {
+          const m = new THREE.Matrix4();
+          for (let i = 0; i < o.count; i++) {
+            o.getMatrixAt(i, m);
+            list.push(Object.assign(new THREE.Vector3(m.elements[12], m.elements[13], m.elements[14]), { cert: o.userData.certainty }));
+          }
+        }
+      });
+      const near = f.firstStreet.clone().add(new THREE.Vector3(-30, 0, 200));
+      const w = list.sort((a, b) => a.cert - b.cert || a.distanceTo(near) - b.distanceTo(near))[0];
+      return w ? { target: w, offset: new THREE.Vector3(30, 55, 70), marks: 'wells' } : null;
+    }
+    case 'cart': {
+      // fly to the cart nearest the view, from behind and above it (it keeps moving)
+      const c = app.bustle?.nearestCart(controls.target.x, controls.target.z);
+      if (!c) return { target: f.firstStreet.clone(), offset: new THREE.Vector3(40, 45, 80) };
+      const back = new THREE.Vector3(-Math.sin(c.yaw) * 14 + 6, 11, -Math.cos(c.yaw) * 14);
+      return { target: new THREE.Vector3(c.x, c.y + 1, c.z), offset: back };
+    }
+    case 'fields': {
+      const c = world.siteCenter;
+      return { target: new THREE.Vector3(c.x + 120, world.groundAt(c.x + 120, c.z + 620), c.z + 620), offset: new THREE.Vector3(160, 160, 320) };
+    }
+    case 'drain':
+      return { target: f.firstStreet.clone().add(new THREE.Vector3(0, -2, 60)), offset: new THREE.Vector3(60, 70, 110), marks: 'drains' };
+    case 'evidence':
+      return { target: f.firstStreet.clone(), offset: new THREE.Vector3(230, 320, 460) };
+    case 'afterCity':
+      return { target: world.siteCenter.clone(), offset: new THREE.Vector3(-40, 330, 640), era: 'today' };
+    default:
+      return null;
+  }
+}
+function goToPlace(id, { openInfo = true } = {}) {
+  if (!app.world) return;
+  if (id.startsWith('craft-')) {
+    goToStation(id.slice(6));
+    if (openInfo) app.info.show(id);
+    return;
+  }
+  const v = placeView(id);
+  if (!v) return;
+  setEra(v.era || living());
+  flyTo({ target: v.target, position: v.position || v.target.clone().add(v.offset) });
+  if (v.marks) markers?.show(v.marks, 12);
+  if (openInfo) {
+    // the gold outline is drawn after the walk view's (which has none) is gone
+    setTimeout(() => app.info.show(id, v.shape), 40);
+  }
+}
+let beforeTour = null;
+const guide = createGuide({
+  button: guideButton,
+  panel: document.getElementById('guide-panel'),
+  card: document.getElementById('tour-card'),
+  tour: TOUR,
+  groups: PLACE_GROUPS,
+  features: FEATURES,
+  searchWords: SEARCH_WORDS,
+  onPlace: (id) => goToPlace(id),
+  onStart: () => {
+    beforeTour = { era: eras?.current || 'height', mode: certainty?.mode || 'alive' };
+    chat.open(false);
+    script.open(false);
+    // the places sit above the tour card
+    stage.setLift(0.2);
+  },
+  onStep: (s) => {
+    if (!app.world) return;
+    app.info.close();
+    setMode(s.mode || 'alive');
+    if (s.place.startsWith('craft-')) {
+      setEra('height');
+      goToStation(s.place.slice(6), { walkJump: false });
+      return;
+    }
+    const v = placeView(s.place);
+    setEra(s.era || v?.era || 'height');
+    if (v) flyTo({ target: v.target, position: v.position || v.target.clone().add(v.offset) }, { duration: 4 });
+  },
+  onMore: (id) => {
+    const v = id.startsWith('craft-') ? null : placeView(id);
+    app.info.show(id, v?.shape || null);
+  },
+  onEnd: () => {
+    stage.setLift(0);
+    app.info.close();
+    if (beforeTour) {
+      setMode(beforeTour.mode);
+      setEra(beforeTour.era);
+    }
+    beforeTour = null;
+  },
+});
+if (params.has('debug')) app.guide = guide;
+if (params.has('guide')) setTimeout(() => guide.open(true), 500);
 
 // ---------- the Indus script ----------
 const scriptButton = document.getElementById('script-button');
@@ -375,6 +621,8 @@ eraButton.addEventListener('click', () => document.getElementById('time-panel').
 document.getElementById('time-button').addEventListener('click', () => eraControl.open(false));
 // walking starts in the living city: from the buried or excavated views, go back to its height
 app.beforeWalk = () => {
+  // walking ends the tour (its arrow keys would also step the tour)
+  if (guide.touring) guide.stopTour();
   if (eras && (eras.current === 'buried' || eras.current === 'today')) {
     eras.set('height');
     eraControl.show('height');
@@ -427,6 +675,7 @@ stage.renderer.setAnimationLoop((now) => {
     if (app.world) limit();
   }
 
+  stage.updateLift(dt);
   daytime.update(dt, t);
   const light = daytime.light;
   weather?.update(dt, t, {
@@ -443,6 +692,19 @@ stage.renderer.setAnimationLoop((now) => {
       population: eras ? eras.population : 1,
     });
   }
+  if (bustle && light) {
+    bustle.setSeason(daytime.state.season);
+    bustle.update(dt, t, {
+      camera,
+      day: THREE.MathUtils.clamp((light.elevation + 4) / 14, 0, 1),
+      rain: daytime.rainLevel,
+      population: eras ? eras.population : 1,
+      evidence: app.city.certainty.mixUniform.value,
+      scale: stage.pixelsPerMetre(),
+      hour: daytime.state.hour,
+    });
+  }
+  markers?.update(dt);
   eras?.update(dt);
   updateSound(dt, light);
   stage.sky.position.copy(camera.position);

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Batch, CERTAINTY } from './batch.js';
 import { buildHouse } from './houses.js';
 import { buildCitadel, planCitadel } from './citadel.js';
-import { loadTraces, buildTraced } from './traced.js';
+import { loadTraces, buildTraced, TRACED_CELL } from './traced.js';
 import {
   createRng,
   PLATFORMS,
@@ -42,31 +42,39 @@ function platformMesh(outline, height, holes, sideMaterial, topMaterial) {
   return mesh;
 }
 
+// a well: a ring of wedge-shaped bricks, dark water inside, and a paved floor around
+// it (paving around wells is common on the plans), so wells read from above
+const wellApronMat = new THREE.MeshStandardMaterial({ color: '#c79f78', roughness: 0.95 });
+const wellWaterMat = new THREE.MeshStandardMaterial({ color: '#122220', roughness: 0.15, metalness: 0.1 });
 function wellMeshes(wells, brick) {
-  const ring = new THREE.CylinderGeometry(0.85, 0.85, 0.75, 14, 1, true);
-  ring.translate(0, 0.375, 0);
-  const water = new THREE.CircleGeometry(0.7, 14);
+  const ring = new THREE.CylinderGeometry(0.85, 0.85, 0.8, 16, 1, true);
+  ring.translate(0, 0.4, 0);
+  const water = new THREE.CircleGeometry(0.72, 16);
   water.rotateX(-Math.PI / 2);
-  water.translate(0, 0.25, 0);
+  water.translate(0, 0.3, 0);
+  const apron = new THREE.BoxGeometry(2.5, 0.1, 2.5);
+  apron.translate(0, 0.05, 0);
 
-  const waterMat = new THREE.MeshStandardMaterial({ color: '#1d2a27', roughness: 0.3 });
   const rings = new THREE.InstancedMesh(ring, brick, wells.length);
-  const pools = new THREE.InstancedMesh(water, waterMat, wells.length);
+  const pools = new THREE.InstancedMesh(water, wellWaterMat, wells.length);
+  const aprons = new THREE.InstancedMesh(apron, wellApronMat, wells.length);
   const m = new THREE.Matrix4();
   const certainty = new Float32Array(wells.length);
   wells.forEach((w, i) => {
     m.makeTranslation(w.x, w.y, w.z);
     rings.setMatrixAt(i, m);
     pools.setMatrixAt(i, m);
+    aprons.setMatrixAt(i, m);
     certainty[i] = w.cert;
   });
   rings.geometry.setAttribute('aCertainty', new THREE.InstancedBufferAttribute(certainty, 1));
   rings.castShadow = true;
   rings.receiveShadow = true;
-  return [rings, pools];
+  aprons.receiveShadow = true;
+  return [rings, pools, aprons];
 }
 
-const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), wells: [], lamps: [], yards: [], courts: [] });
+const newBatches = () => ({ walls: new Batch({ collect: true }), roofs: new Batch(), paving: new Batch(), ramps: new Batch(), drains: new Batch(), wells: [], lamps: [], yards: [], courts: [], roofSpots: [], drainLines: [] });
 
 export function buildCity({ lowPower = false } = {}) {
   const rng = createRng(2500);
@@ -95,7 +103,21 @@ export function buildCity({ lowPower = false } = {}) {
   const localBounds = boundsOf(localOutline);
   const insideLower = (l) => corners(l).every(([x, z]) => pointInPolygon(x, z, lower.outline));
   const worldBox = (l) => boundsOf(corners(l));
-  const isCovered = (l) => covered.some((c) => overlaps(worldBox(l), c, 1));
+  // a plot is taken by a traced plan when traced walls lie on it or close by; plots in
+  // the empty corners of a plan's rectangle get generated houses, so no bare ring of
+  // ground is left around the excavated quarters
+  const cells = world.tracedCells || new Set();
+  const isCovered = (l) => {
+    const b = worldBox(l);
+    if (!covered.some((c) => overlaps(b, c, 1))) return false;
+    const m = 0.5;
+    for (let cx = Math.floor((b.x0 - m) / TRACED_CELL); cx <= Math.floor((b.x1 + m) / TRACED_CELL); cx++) {
+      for (let cz = Math.floor((b.z0 - m) / TRACED_CELL); cz <= Math.floor((b.z1 + m) / TRACED_CELL); cz++) {
+        if (cells.has(`${cx},${cz}`)) return true;
+      }
+    }
+    return false;
+  };
   const isKnownAt = (x, z) => EXCAVATED_AREAS.some((a) => x >= a.x0 && x <= a.x1 && z >= a.z0 && z <= a.z1);
   const isKnown = (l) => {
     const [cx, cz] = gridToScene((l.x0 + l.x1) / 2, (l.z0 + l.z1) / 2);
@@ -105,7 +127,9 @@ export function buildCity({ lowPower = false } = {}) {
   const blocks = blocksBetweenStreets(localBounds, LOWER_TOWN_STREETS);
   let houseCount = 0;
   for (const block of blocks) {
-    for (const lot of subdivide(block, rng)) {
+    // plots a little smaller and lanes a little more frequent than before, closer to
+    // the grain of the excavated plans
+    for (const lot of subdivide(block, rng, { minLot: 8, maxLot: 20, laneChance: 0.5 })) {
       if (!insideLower(lot)) continue;
       if (rng.chance(0.04)) {
         // a few open yards (some become workshops in the life layer)
@@ -148,8 +172,16 @@ export function buildCity({ lowPower = false } = {}) {
       y: lower.y + 0.12,
       known: Boolean(s.known),
     });
-    if (s.axis === 'ns') grid.paving.box(off, lower.y, span[0], off + 0.6, lower.y + 0.12, span[1], cert);
-    else grid.paving.box(span[0], lower.y, off, span[1], lower.y + 0.12, off + 0.6, cert);
+    // the covered drain: a raised line of darker cover bricks, with a soak pit (a
+    // brick-lined box where silt settled) every so often
+    const dw = 0.8;
+    const d0 = off - 0.1;
+    if (s.axis === 'ns') grid.drains.box(d0, lower.y, span[0], d0 + dw, lower.y + 0.18, span[1], cert);
+    else grid.drains.box(span[0], lower.y, d0, span[1], lower.y + 0.18, d0 + dw, cert);
+    for (let t = span[0] + 12; t < span[1] - 6; t += 28) {
+      if (s.axis === 'ns') grid.drains.box(d0 - 0.35, lower.y, t, d0 + dw + 0.35, lower.y + 0.4, t + 1.5, cert);
+      else grid.drains.box(t, lower.y, d0 - 0.35, t + 1.5, lower.y + 0.4, d0 + dw + 0.35, cert);
+    }
   }
 
   // ramps where First Street leaves the platform (imagined)
@@ -192,6 +224,7 @@ export function buildCity({ lowPower = false } = {}) {
     walls: (opts) => createBrickMaterial({ ruins: true, ...opts }),
     roofs: (opts) => createEarthMaterial({ tone: '#c2a481', ruins: true, ...opts }),
     paving: (opts) => createBrickMaterial({ tone: '#a97452', ruins: true, ...opts }),
+    drains: (opts) => createBrickMaterial({ tone: '#7e4b33', ruins: true, ...opts }),
     ramps: (opts) => createEarthMaterial({ tone: '#ae9070', ruins: true, ...opts }),
   };
   const materials = {};
@@ -246,6 +279,15 @@ export function buildCity({ lowPower = false } = {}) {
     return { x, z, w: r.x1 - r.x0, d: r.z1 - r.z0, yaw: GRID.angle, known: isKnownAt(x, z) };
   };
   const yards = grid.yards.map(toScene);
+  // every drain line in scene coordinates (streets and traced plans), for showing them
+  const drainLines = [...drains.map((d) => [d.a[0], d.a[1], d.b[0], d.b[1], d.y]), ...world.drainLines];
+  const roofSpots = [
+    ...world.roofSpots,
+    ...grid.roofSpots.map((r) => {
+      const [x, z] = gridToScene(r.x, r.z);
+      return { ...r, x, z, yaw: GRID.angle };
+    }),
+  ];
   const courts = grid.courts.map(toScene);
   const streets = streetSpans.map((st) => ({
     id: st.id,
@@ -335,6 +377,8 @@ export function buildCity({ lowPower = false } = {}) {
     firstStreetSpan: first ? first.span : null,
     lamps,
     drains,
+    drainLines,
+    roofSpots,
     yards,
     courts,
     streets,

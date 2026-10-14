@@ -89,7 +89,7 @@ export const FEATURES = {
       'Fourteen skeletons were found in one room of House V.',
     ],
     debated: 'Wheeler read skeletons like these as victims of a final massacre. Later study (Dales 1964) found they come from different times, with no evidence of a massacre.',
-    here: 'Walls traced from Marshall’s Plate XXXIX. His plan shows walls of several periods together, so not all of them stood at once.',
+    here: 'Walls traced from Marshall’s Plate XXXIX. His plan shows walls of several periods together, so not all of them stood at once. Roofs over the rooms the plan encloses, and the few upper rooms, are imagined, so the quarter reads like the generated houses around it; switch to Evidence to see only the walls. Where the plan’s rectangle has no walls, generated houses fill the gap.',
     sources: ['marshall', 'dales', 'harappa'],
   },
   'area-VS': {
@@ -102,7 +102,7 @@ export const FEATURES = {
       'Houses here had wells, bathrooms, and drains that ran out into First Street.',
     ],
     debated: null,
-    here: 'Walls traced from Marshall’s Plate LIII (A and B sections). Several periods are shown together. The north-west part of VS is on another plate, not traced yet.',
+    here: 'Walls traced from Marshall’s Plate LIII (A and B sections). Several periods are shown together. The north-west part of VS is on another plate, not traced yet. Roofs over the rooms the plan encloses, and the few upper rooms, are imagined, so the quarter reads like the generated houses around it; switch to Evidence to see only the walls. Where the plan’s rectangle has no walls, generated houses fill the gap.',
     sources: ['marshall'],
   },
   'area-DK-G': {
@@ -115,7 +115,7 @@ export const FEATURES = {
       'Many houses had wells, bathrooms and drains.',
     ],
     debated: null,
-    here: 'Walls traced from Mackay’s plan of one level, “Intermediate I” (Plate XVIII). Only the southern part of DK-G is traced; the rest is generated.',
+    here: 'Walls traced from Mackay’s plan of one level, “Intermediate I” (Plate XVIII). Only the southern part of DK-G is traced; the rest is generated. Roofs over the rooms the plan encloses, and the few upper rooms, are imagined, so the quarter reads like the generated houses around it; switch to Evidence to see only the walls. Where the plan’s rectangle has no walls, generated houses fill the gap.',
     sources: ['mackay'],
   },
   'area-L': {
@@ -125,7 +125,7 @@ export const FEATURES = {
     what: 'Large buildings on the southern part of the citadel mound, including the pillared hall.',
     known: ['Excavated in 1926–27 and published by Marshall (1931).'],
     debated: 'What these large buildings were for is not known.',
-    here: 'Walls traced from Marshall’s Plate XXX. Several periods are shown together.',
+    here: 'Walls traced from Marshall’s Plate XXX. Several periods are shown together. Roofs over the rooms the plan encloses, and the few upper rooms, are imagined, so the quarter reads like the generated houses around it; switch to Evidence to see only the walls. Where the plan’s rectangle has no walls, generated houses fill the gap.',
     sources: ['marshall'],
   },
   'area-SD': {
@@ -234,7 +234,7 @@ export const FEATURES = {
       'Soak pits along the way caught silt and could be cleaned out.',
     ],
     debated: null,
-    here: 'Along First Street the drain is known from the plans; along the generated streets it is imagined. In the monsoon view, running water is drawn along the drain line so you can see it; in reality it ran under the covers. Which way it ran here is inferred: toward the end of the street nearer the river.',
+    here: 'Drawn as a raised line of darker cover bricks, with a soak pit every so often. Drains on the traced plans are drawn where the plan shows them; along First Street the drain is known; along the generated streets it is imagined, and the spacing of the soak pits is a guess. In the monsoon view, running water is drawn along the drain line so you can see it; in reality it ran under the covers. Which way it ran here is inferred: toward the end of the street nearer the river. In the Guide, “A street drain” marks every drain in gold for a moment.',
     sources: ['jansen', 'kenoyer'],
   },
   well: {
@@ -244,8 +244,34 @@ export const FEATURES = {
     what: 'A round shaft lined with wedge-shaped bricks.',
     known: ['Michael Jansen estimated that the city had over 700 wells, most of them inside private buildings.'],
     debated: null,
-    here: 'Wells in generated houses are imagined; only wells on the traced plans are real.',
+    here: 'Wells on the traced plans are where the plans show them; wells in generated houses are imagined. The paved floor around each well is common on the plans but drawn the same for every well here. In the Guide, “A well” marks every well in gold for a moment.',
     sources: ['jansen', 'harappa'],
+  },
+  cart: {
+    title: 'An ox cart',
+    kicker: 'Life in the city',
+    certainty: 'imagined',
+    what: 'A two-wheeled cart drawn by a humped ox, carrying sacks.',
+    known: [
+      'Terracotta models of carts with solid wheels, and figurines of humped cattle, are common finds at Mohenjo-daro and other Indus cities.',
+      'Humped cattle (zebu) also appear on many seals.',
+    ],
+    debated: 'Real carts were wooden and have not survived, so their size and build are inferred from the toy-sized models. How much goods moved by cart, by boat on the river, or on people’s heads is not known.',
+    here: 'Imagined: the carts, where they go and what they carry. They keep to the streets by day and stay in when it rains.',
+    sources: ['kenoyer', 'marshall'],
+  },
+  fields: {
+    title: 'Fields and trees on the plain',
+    kicker: 'Landscape · imagined',
+    certainty: 'imagined',
+    what: 'Fields of wheat, barley and cotton around the city, with trees along the field edges and the river.',
+    known: [
+      'Plant remains from Indus sites show wheat and barley, grown through the cool season after the flood, and summer crops such as cotton and sesame.',
+      'Traces of cotton cloth have been found at Mohenjo-daro.',
+    ],
+    debated: 'Where the fields lay, how large they were, and how they were watered (by the flood, wells or channels) is not known. Which trees grew here is not known either.',
+    here: 'Imagined. The colours follow the seasons: young winter crops in the cool season, harvest gold in the hot season, cotton through the monsoon.',
+    sources: ['kenoyer'],
   },
   ramp: {
     title: 'A ramp',
@@ -303,6 +329,8 @@ export function elementLine(kind, certainty, { traced = false } = {}) {
     case 'roofs':
       if (c === 'inferred') return ['inferred', 'An upper floor: stairs in many houses suggest one; its form is a guess.'];
       return ['imagined', 'No roof survives. Flat roofs of timber, reeds and mud are a reasonable guess.'];
+    case 'drains':
+      return [c, c === 'excavated' ? 'This drain is drawn on the excavation plan.' : c === 'inferred' ? 'Drains like this ran along First Street; its exact line here is inferred.' : 'This drain continues the pattern of the excavated streets: imagined.'];
     case 'paving':
       return [c, c === 'imagined' ? 'This drain or paving is imagined.' : 'Paving and drains like this are known from the excavations.'];
     case 'ramps':

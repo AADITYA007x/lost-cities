@@ -58,9 +58,30 @@ export function createStage({ lowPower }) {
 
   const flight = createFlight(camera, controls);
 
+  // "lift": shift the picture up so the place looked at sits above a card at the
+  // bottom of the screen (the tour). 0 = centred, 0.2 = a fifth of the height higher.
+  let lift = 0;
+  let liftTarget = 0;
+  function applyLift() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (lift > 0.001) camera.setViewOffset(w, h, 0, lift * h, w, h);
+    else camera.clearViewOffset();
+  }
+  function setLift(f) {
+    liftTarget = f;
+  }
+  function updateLift(dt) {
+    if (lift === liftTarget) return;
+    const step = dt * 0.5;
+    lift = Math.abs(liftTarget - lift) <= step ? liftTarget : lift + Math.sign(liftTarget - lift) * step;
+    applyLift();
+  }
+
   function resize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.fov = fovFor();
+    applyLift();
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
@@ -83,6 +104,8 @@ export function createStage({ lowPower }) {
     flight,
     portrait,
     resize,
+    setLift,
+    updateLift,
     pixelsPerMetre,
   });
 }

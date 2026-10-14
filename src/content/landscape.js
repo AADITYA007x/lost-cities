@@ -31,7 +31,12 @@ export const LANDSCAPE_NOTE = {
     {
       level: 'imagined',
       label: 'Imagined',
-      text: 'Flat roofs of timber, reeds and mud are a reasonable guess, since no roof survives. The timber hall above the Great Hall’s brick blocks, and the ramps up to the platforms, are imagined.',
+      text: 'Flat roofs of timber, reeds and mud are a reasonable guess, since no roof survives. The timber hall above the Great Hall’s brick blocks, and the ramps up to the platforms, are imagined. On the traced plans, roofs are added over the rooms the walls enclose, so the excavated quarters read like the houses around them; which rooms were roofed is not known.',
+    },
+    {
+      level: 'imagined',
+      label: 'A living city',
+      text: 'The people, smoke from kilns and cooking fires, birds, ox carts, cloth and grain drying on roofs, and the fields and trees on the plain are imagined, to show a city in use. Each draws on what is known: kilns and hearths are found, terracotta cart models and humped cattle figurines are common, traces of cotton cloth survive, and wheat, barley and cotton were grown. Where they were and how many is a guess. Switch to Evidence to hide them.',
     },
     {
       level: 'inferred',

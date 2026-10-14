@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { CERTAINTY } from './batch.js';
 import { makeTransform, isCalibrated } from './trace-transform.js';
 import { sceneToGrid, gridToScene, FIRST_STREET } from './layout.js';
+import { roofTracedPlan } from './traced-roofs.js';
+
+// cells (4 m) that hold traced walls, so generated houses can fill the gaps right up
+// to a plan's edge without standing on its walls
+export const TRACED_CELL = 2;
 
 // First Street is known to be an open street. Auto-traced lines that cross its middle
 // are almost always drains, cover stones or lettering drawn on the plan, not walls,
@@ -63,6 +68,8 @@ export function eraOfTrace(data) {
 export function buildTraced(traces, groundAt, out) {
   const covered = [];
   const v = (x, y, z) => new THREE.Vector3(x, y, z);
+  out.tracedCells = out.tracedCells || new Set();
+  const mark = (x, z) => out.tracedCells.add(`${Math.floor(x / TRACED_CELL)},${Math.floor(z / TRACED_CELL)}`);
 
   for (const { data } of traces) {
     const toScene = makeTransform(data.calibration);
@@ -80,6 +87,7 @@ export function buildTraced(traces, groundAt, out) {
       z1 = Math.max(z1, z);
     };
 
+    const segments = [];
     for (const wall of data.walls || []) {
       const pts = wall.points.map(toScene);
       pts.forEach(grow);
@@ -92,6 +100,8 @@ export function buildTraced(traces, groundAt, out) {
       for (const [[ax, az], [bx, bz]] of pieces) {
         const len = Math.hypot(bx - ax, bz - az);
         if (len < 0.3) continue;
+        segments.push([ax, az, bx, bz, half]);
+        for (let s = 0; s <= len; s += 2) mark(ax + ((bx - ax) * s) / len, az + ((bz - az) * s) / len);
         const dx = (bx - ax) / len;
         const dz = (bz - az) / len;
         // extend each end by half the width so corners close
@@ -121,24 +131,30 @@ export function buildTraced(traces, groundAt, out) {
         const [bx, bz] = pts[i + 1];
         const len = Math.hypot(bx - ax, bz - az);
         if (len < 0.05) continue;
-        const nx = ((bz - az) / len) * 0.3;
-        const nz = (-(bx - ax) / len) * 0.3;
+        const nx = ((bz - az) / len) * 0.4;
+        const nz = (-(bx - ax) / len) * 0.4;
         const y = groundAt((ax + bx) / 2, (az + bz) / 2);
-        out.paving.hexa(
+        out.drains.hexa(
           [
             v(ax + nx, y, az + nz), v(bx + nx, y, bz + nz), v(bx - nx, y, bz - nz), v(ax - nx, y, az - nz),
-            v(ax + nx, y + 0.12, az + nz), v(bx + nx, y + 0.12, bz + nz), v(bx - nx, y + 0.12, bz - nz), v(ax - nx, y + 0.12, az - nz),
+            v(ax + nx, y + 0.18, az + nz), v(bx + nx, y + 0.18, bz + nz), v(bx - nx, y + 0.18, bz - nz), v(ax - nx, y + 0.18, az - nz),
           ],
           CERTAINTY.excavated
         );
+        out.drainLines?.push([ax, az, bx, bz, y + 0.18]);
       }
     }
 
+    const planWells = [];
     for (const well of data.wells || []) {
       const [x, z] = toScene(well.point);
       grow([x, z]);
+      planWells.push([x, z]);
       out.wells.push({ x, z, y: groundAt(x, z), cert: well.certainty === 'inferred' ? CERTAINTY.inferred : CERTAINTY.excavated });
     }
+
+    // imagined roofs (and a few upper rooms) over the rooms the plan encloses
+    roofTracedPlan(segments, planWells, groundAt, out, eraOfTrace(data));
 
     out.walls.tag = savedTag;
 

@@ -6,7 +6,7 @@ import { CERTAINTY } from './batch.js';
 
 const T = 0.9; // outer wall
 const t = 0.6; // inner wall
-const H = 3.3; // ground storey height
+const H0 = 3.3; // usual ground storey height
 const DOOR = 1.1;
 
 function wallWithDoor(batch, axis, a0, a1, fixed0, fixed1, y, h, door, cert) {
@@ -50,6 +50,8 @@ export function buildHouse(lot, y, rng, out, opts) {
 
 function buildHouseInner(lot, y, rng, out, { known, detail }) {
   const { walls, roofs, wells } = out;
+  // storeys differ a little from house to house, as they do in the plans' wall widths
+  const H = H0 - 0.25 + lampRand(lot, 9) * 0.5;
   const wallCert = known ? CERTAINTY.inferred : CERTAINTY.imagined;
   const upperCert = known ? CERTAINTY.inferred : CERTAINTY.imagined;
   const roofCert = CERTAINTY.imagined;
@@ -136,7 +138,13 @@ function buildHouseInner(lot, y, rng, out, { known, detail }) {
   for (const [side, [a0, b0, a1, b1]] of Object.entries(strips)) {
     const isUpper = upper.includes(side);
     roofs.box(a0 - 0.15, y + H, b0 - 0.15, a1 + 0.15, y + H + 0.3, b1 + 0.15, isUpper ? upperCert : roofCert);
-    if (!isUpper) continue;
+    if (!isUpper) {
+      // somewhere on the roof to dry cloth or grain (imagined)
+      if (out.roofSpots && lampRand(lot, 10 + side.charCodeAt(0)) < 0.09 && a1 - a0 > 2 && b1 - b0 > 2) {
+        out.roofSpots.push({ x: (a0 + a1) / 2, z: (b0 + b1) / 2, y: y + H + 0.3, w: a1 - a0, d: b1 - b0 });
+      }
+      continue;
+    }
     const yu = y + H + 0.3;
     const hu = 2.9;
     const ut = 0.5;

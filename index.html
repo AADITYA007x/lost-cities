@@ -71,6 +71,10 @@
     <button id="sound-button" type="button" class="sound-button" aria-pressed="false" aria-label="Sound off: turn it on" hidden>
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path class="mute" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
+    <button id="guide-button" type="button" class="guide-button" aria-expanded="false" aria-controls="guide-panel" hidden>Guide</button>
+    <aside id="guide-panel" class="guide-panel" role="dialog" aria-label="Guide: tour and places"></aside>
+    <section id="tour-card" class="tour-card" aria-label="Tour" aria-live="polite"></section>
+
     <button id="chat-button" type="button" class="chat-button" aria-expanded="false" aria-controls="chat-panel" hidden>Talk to a resident</button>
     <aside id="chat-panel" class="chat-panel" aria-label="Talk to a resident"></aside>
 
