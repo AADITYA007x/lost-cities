@@ -2206,3 +2206,63 @@ body.touring .note-button {
     z-index: 8;
   }
 }
+
+/* ---------- scrolling panels: dark thin scrollbars, smooth scrolling ---------- */
+.note-panel,
+.info-panel,
+.script-panel,
+.guide-panel,
+.guide-list,
+.chat-panel,
+.chat-log,
+.era-panel,
+.time-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 178, 106, 0.35) transparent;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* older Chrome and Safari, which use these instead */
+.note-panel::-webkit-scrollbar,
+.info-panel::-webkit-scrollbar,
+.script-panel::-webkit-scrollbar,
+.guide-list::-webkit-scrollbar,
+.chat-log::-webkit-scrollbar,
+.era-panel::-webkit-scrollbar,
+.time-panel::-webkit-scrollbar {
+  width: 6px;
+  background: transparent;
+}
+
+.note-panel::-webkit-scrollbar-thumb,
+.info-panel::-webkit-scrollbar-thumb,
+.script-panel::-webkit-scrollbar-thumb,
+.guide-list::-webkit-scrollbar-thumb,
+.chat-log::-webkit-scrollbar-thumb,
+.era-panel::-webkit-scrollbar-thumb,
+.time-panel::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(212, 178, 106, 0.35);
+}
+
+.note-panel::-webkit-scrollbar-button,
+.info-panel::-webkit-scrollbar-button,
+.script-panel::-webkit-scrollbar-button,
+.guide-list::-webkit-scrollbar-button,
+.chat-log::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* the big panels sit on a nearly solid background instead of blurring the moving
+   3D view behind them: blurring it again on every frame made scrolling stutter */
+.note-panel,
+.info-panel,
+.script-panel,
+.guide-panel,
+.chat-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(20, 16, 13, 0.95);
+}

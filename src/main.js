@@ -149,19 +149,21 @@ async function init() {
   app.home = { target: homeTarget, position: homeTarget.clone().add(homeOffset) };
 
   app.labels = createLabels(document.getElementById('labels'), [
-    { text: PLACE_LABELS.citadel, position: f.citadel, lift: 40, near: 700, far: 4200 },
-    { text: PLACE_LABELS.lowerTown, position: f.lowerTown, lift: 40, near: 700, far: 4200 },
-    { text: PLACE_LABELS.river, position: terrain.places.river, lift: 14, near: 300, far: 4200 },
-    { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900 },
-    { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500 },
-    { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500 },
-    ...life.stations.map((st) => ({ text: CRAFT_LABELS[st.craft], position: st.labelPos, lift: 0.3, near: 0, far: 160 })),
+    // priority decides which label stays when two overlap on screen
+    { text: PLACE_LABELS.citadel, position: f.citadel, lift: 40, near: 700, far: 4200, priority: 2 },
+    { text: PLACE_LABELS.lowerTown, position: f.lowerTown, lift: 40, near: 700, far: 4200, priority: 2 },
+    { text: PLACE_LABELS.river, position: terrain.places.river, lift: 14, near: 300, far: 4200, priority: 2 },
+    { text: PLACE_LABELS.greatBath, position: f.greatBath, lift: 6, near: 0, far: 1900, priority: 4 },
+    { text: PLACE_LABELS.greatHall, position: f.greatHall, lift: 4, near: 0, far: 1500, priority: 3 },
+    { text: PLACE_LABELS.firstStreet, position: f.firstStreet, lift: 6, near: 0, far: 1500, priority: 3 },
+    ...life.stations.map((st) => ({ text: CRAFT_LABELS[st.craft], position: st.labelPos, lift: 0.3, near: 0, far: 160, priority: 3 })),
     ...Object.entries(f.tracedAreas).map(([area, p]) => ({
       text: `${area} · walls from the excavation plan`,
       position: p,
       lift: 10,
       near: 0,
       far: 1100,
+      priority: 1,
     })),
   ]);
 
