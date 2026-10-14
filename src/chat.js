@@ -30,6 +30,13 @@ const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>'
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 const Recognition = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
 
+// the answer's last paragraph may be a note from today ("TODAY: ...")
+function splitToday(text) {
+  const m = text.match(/^([\s\S]*?)\s*\(?\bTODAY:\s*([\s\S]+?)\)?\s*$/i);
+  if (!m || !m[1].trim()) return { said: text, today: '' };
+  return { said: m[1].trim(), today: m[2].trim() };
+}
+
 export function createChat({ panel, button, getContext, onPersona, onSpeaking }) {
   panel.innerHTML = `
     <div class="chat-head">
@@ -42,7 +49,7 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
     <div class="chat-personas" role="radiogroup" aria-label="Who to talk to">
       ${PERSONAS.map((p) => `<button type="button" role="radio" data-persona="${p.id}" aria-checked="false">${p.label}</button>`).join('')}
     </div>
-    <p class="chat-note">An imagined person, not a real one. Answers come only from the notes in this app, and when nobody knows, the resident says so. AI can still make mistakes: check the info panels.</p>
+    <p class="chat-note">An imagined person, not a real one. They speak from their own time; what archaeologists know, and don’t know, comes as a separate note from today. Answers use only the notes in this app. AI can still make mistakes: check the info panels.</p>
     <div class="chat-tools">
       <button type="button" class="chat-voice" aria-pressed="true">Read aloud: on</button>
     </div>
@@ -78,14 +85,21 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
   function speak(text) {
     if (!synth || !readAloud) return;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[()]/g, ' '));
+    const { said, today } = splitToday(text);
+    // the resident's words, then the note from today, a little faster and lower
+    const parts = [[said, 0.95, 1]];
+    if (today) parts.push(['A note from today. ' + today, 1, 0.9]);
     const v = pickVoice();
-    if (v) u.voice = v;
-    u.rate = 0.95;
-    u.pitch = 1;
-    u.onstart = () => onSpeaking?.(true);
-    u.onend = u.onerror = () => onSpeaking?.(false);
-    synth.speak(u);
+    parts.forEach(([t, rate, pitch], i) => {
+      const u = new SpeechSynthesisUtterance(t.replace(/[()]/g, ' '));
+      if (v) u.voice = v;
+      u.rate = rate;
+      u.pitch = pitch;
+      if (i === 0) u.onstart = () => onSpeaking?.(true);
+      if (i === parts.length - 1) u.onend = () => onSpeaking?.(false);
+      u.onerror = () => onSpeaking?.(false);
+      synth.speak(u);
+    });
   }
   function stopSpeaking() {
     if (synth) synth.cancel();
@@ -142,7 +156,12 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
       b.setAttribute('aria-checked', String(on));
     });
     log.innerHTML = messages
-      .map((m) => `<div class="msg ${m.role}${m.error ? ' error' : ''}"><p>${esc(m.text)}</p></div>`)
+      .map((m) => {
+        if (m.role !== 'resident' || m.error) return `<div class="msg ${m.role}${m.error ? ' error' : ''}"><p>${esc(m.text)}</p></div>`;
+        // the resident lives in 2500 BCE; what we know (and don't) today is a separate note
+        const { said, today } = splitToday(m.text);
+        return `<div class="msg resident"><p>${esc(said)}</p>${today ? `<p class="msg-today"><b>From today</b>${esc(today)}</p>` : ''}</div>`;
+      })
       .join('');
     if (waiting) log.insertAdjacentHTML('beforeend', '<div class="msg resident waiting"><p><span></span><span></span><span></span></p></div>');
     suggest.hidden = messages.length > 0;

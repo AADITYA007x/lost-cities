@@ -1648,6 +1648,28 @@ h1 {
   background: rgba(239, 230, 216, 0.07);
 }
 
+/* what archaeologists know today: set apart from the resident's own words */
+.msg.resident p.msg-today {
+  margin-top: 6px;
+  background: none;
+  border-left: 2px solid var(--gold);
+  border-radius: 0;
+  padding: 2px 0 2px 10px;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.msg-today b {
+  display: block;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
 .msg.error p {
   color: var(--muted);
   font-style: italic;
