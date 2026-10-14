@@ -13,6 +13,7 @@ An interactive 3D reconstruction of Mohenjo-daro around 2500 BCE that shows how 
 - People: zoom in close to the lower town. `?view=craft` starts next to a workshop.
 - Through time: the button at the top. For testing, add `&era=founding|height|late|buried|today` or `&split` (then and now) to the URL.
 - Indus script: the button bottom left, or click the seal carver in the city. `?script` opens it straight away.
+- Sound: "Begin with sound" on the opening screen, or the round speaker button under the time button. All sound is generated live; there are no audio files.
 
 ## Terrain
 `public/terrain/mohenjo-daro.bin` is made from the Copernicus DEM tile by `tools/make-terrain.py` (Python, only needed if the terrain is ever rebuilt). Keep the raw tile in `data-raw/` (git-ignored).

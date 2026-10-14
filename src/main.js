@@ -15,6 +15,7 @@ import { createLife, CRAFT_LABELS } from './life.js';
 import { createEras } from './app/eras.js';
 import { createEraControl } from './era-control.js';
 import { createScriptExplorer } from './script-explorer.js';
+import { createSound } from './sound.js';
 
 // Starts everything: the stage, the landscape and city, the opening screen, and the
 // frame loop. Each feature lives in its own module; `app` is what they share.
@@ -189,7 +190,9 @@ async function init() {
 }
 
 function begin(sound, instant = false) {
-  savePreference(sound);
+  // the test views start silent; a real visitor's choice is remembered
+  if (!instant) savePreference(sound);
+  if (sound === 'on') setSound(true);
   opening.classList.add('gone');
   controls.autoRotate = false;
 
@@ -203,6 +206,7 @@ function begin(sound, instant = false) {
     daytime.show();
     eraButton.hidden = false;
     scriptButton.hidden = false;
+    soundButton.hidden = false;
   };
 
   if (instant) {
@@ -234,6 +238,47 @@ const eraControl = createEraControl({
   },
   onSplit: () => {},
 });
+
+// ---------- sound ----------
+const sound = createSound();
+if (params.has('debug')) window.__sound = sound;
+const soundButton = document.getElementById('sound-button');
+function setSound(on) {
+  sound.enable(on);
+  soundButton.setAttribute('aria-pressed', String(on));
+  soundButton.setAttribute('aria-label', on ? 'Sound on: turn it off' : 'Sound off: turn it on');
+  soundButton.classList.toggle('on', on);
+}
+soundButton.addEventListener('click', () => {
+  const on = !sound.on;
+  setSound(on);
+  savePreference(on ? 'on' : 'off');
+});
+document.addEventListener('visibilitychange', () => sound.suspend(document.hidden));
+let soundCheck = 0;
+const soundState = { craftDist: 999 };
+function updateSound(dt, light) {
+  if (!sound.on || !app.world) return;
+  const p = camera.position;
+  const ground = app.world.groundAt(p.x, p.z);
+  const river = app.world.terrain.places.river;
+  soundCheck -= dt;
+  if (soundCheck <= 0 && life) {
+    // the nearest workshop, checked a few times a second
+    soundCheck = 0.3;
+    soundState.craftDist = Math.min(999, ...life.stations.map((st) => Math.hypot(st.x - p.x, st.z - p.z, (st.y - p.y) * 0.5)));
+  }
+  const era = eras ? eras.current : 'height';
+  sound.update({
+    living: era !== 'buried' && era !== 'today',
+    day: light ? THREE.MathUtils.clamp((light.elevation + 4) / 14, 0, 1) : 1,
+    rain: daytime.rainLevel,
+    height: p.y - ground,
+    riverDist: Math.hypot(p.x - river.x, p.z - river.z),
+    craftDist: soundState.craftDist,
+    population: eras ? eras.population : 1,
+  });
+}
 
 // ---------- the Indus script ----------
 const scriptButton = document.getElementById('script-button');
@@ -318,6 +363,7 @@ stage.renderer.setAnimationLoop((now) => {
     });
   }
   eras?.update(dt);
+  updateSound(dt, light);
   stage.sky.position.copy(camera.position);
   if (app.water) app.water.material.uniforms.uTime.value = t;
   app.labels?.update(camera);

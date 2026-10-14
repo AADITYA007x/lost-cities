@@ -1418,3 +1418,42 @@ h1 {
     font-size: 26px;
   }
 }
+
+/* ---------- sound ---------- */
+.sound-button {
+  position: fixed;
+  top: calc(max(16px, env(safe-area-inset-top)) + 50px);
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 5;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.sound-button[hidden] {
+  display: none;
+}
+
+.sound-button .waves {
+  display: none;
+}
+
+.sound-button.on {
+  color: var(--text);
+  border-color: rgba(212, 178, 106, 0.55);
+}
+
+.sound-button.on .waves {
+  display: inline;
+}
+
+.sound-button.on .mute {
+  display: none;
+}
