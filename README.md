@@ -7,7 +7,7 @@ An interactive 3D reconstruction of Mohenjo-daro around 2500 BCE that shows how 
 - With the Worker: `npm run build` then `npx wrangler dev` → http://localhost:8787
 - Skip the opening flight while testing: add `?skipintro` to the URL.
 - Double-click (or double-tap) the landscape to glide back to the starting view.
-- Walk: press **Walk** (top left). Click or tap the round map to jump there; if you end up in a room with no way out, press **Find a way out**. WASD or arrow keys, drag to look, Shift to hurry; on a phone, the circle bottom left. Esc or **Fly** to leave. `?view=walk` starts on First Street.
+- Walk: press **Walk** (top left). Click or tap the round map to jump there; if you end up in a room with no way out, press **Find a way out**. The two mounds are not joined for walking: **Go up to the Great Bath** / **Go down to First Street** (under the map) takes you across, and the Guide takes you to any place on foot. WASD or arrow keys, drag to look, Shift to hurry; on a phone, the circle bottom left. Esc or **Fly** to leave. `?view=walk` starts on First Street.
 - Time and season: the button top right. For testing, add `&time=21` (sun time, 0–24) and `&season=cool|hot|monsoon|after` to the URL.
 - Rain: "Monsoon rain" in the time panel, or add `&rain` to the URL.
 - People: zoom in close to the lower town. `?view=craft` starts next to a workshop.

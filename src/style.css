@@ -2286,3 +2286,36 @@ body.touring .note-button {
     flex: none;
   }
 }
+
+/* walking: cross between the two mounds */
+.walk-cross {
+  position: fixed;
+  top: calc(max(16px, env(safe-area-inset-top)) + 212px);
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 5;
+  font-family: var(--serif);
+  font-size: 15.5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 178, 106, 0.6);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.walk-cross[hidden] {
+  display: none;
+}
+
+@media (hover: hover) {
+  .walk-cross:hover {
+    background: rgba(212, 178, 106, 0.2);
+  }
+}
+
+@media (max-width: 640px) {
+  .walk-cross {
+    top: calc(max(16px, env(safe-area-inset-top)) + 170px);
+    font-size: 14.5px;
+  }
+}

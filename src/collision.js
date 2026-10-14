@@ -119,7 +119,8 @@ export function buildCollision(obstacles, platformHeightAt) {
   const rw = Math.ceil((BOUNDS.x1 - BOUNDS.x0) / RC);
   const rh = Math.ceil((BOUNDS.z1 - BOUNDS.z0) / RC);
   let reach = null;
-  function buildReach(onPlatform, startX, startZ, outlines) {
+  // seeds: one or more [x, z] places to spread from (a street on each mound)
+  function buildReach(onPlatform, seeds, outlines) {
     // open = on a platform, and none of the four fine cells under it holds a wall
     const open = new Uint8Array(rw * rh);
     const bit = (cx, cz) => {
@@ -155,12 +156,14 @@ export function buildCollision(obstacles, platformHeightAt) {
     const queue = new Int32Array(rw * rh);
     let head = 0;
     let tail = 0;
-    const start = nearestFree(startX, startZ, onPlatform, 20);
-    if (!start) return;
-    const s0 = Math.floor((start[1] - BOUNDS.z0) / RC) * rw + Math.floor((start[0] - BOUNDS.x0) / RC);
-    if (!open[s0]) return;
-    reach[s0] = 1;
-    queue[tail++] = s0;
+    for (const [sx, sz] of seeds) {
+      const start = nearestFree(sx, sz, onPlatform, 20);
+      if (!start) continue;
+      const s0 = Math.floor((start[1] - BOUNDS.z0) / RC) * rw + Math.floor((start[0] - BOUNDS.x0) / RC);
+      if (!open[s0] || reach[s0]) continue;
+      reach[s0] = 1;
+      queue[tail++] = s0;
+    }
     while (head < tail) {
       const i = queue[head++];
       const c = i % rw;

@@ -585,6 +585,12 @@ function goToPlace(id, { openInfo = true } = {}) {
   const v = placeView(id);
   if (!v) return;
   setEra(v.era || living());
+  // walking: go there on foot (a short fade) when the place is on the streets
+  if (stage.walking && !v.era && v.target && app.walkJump?.(v.target.x, v.target.z, [v.target.x, v.target.z], 60)) {
+    if (openInfo) app.info.show(id, null);
+    if (v.marks) markers?.show(v.marks, 12);
+    return;
+  }
   flyTo({ target: v.target, position: v.position || v.target.clone().add(v.offset) });
   if (v.marks) markers?.show(v.marks, 12);
   if (openInfo) {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createWalk } from '../walk.js';
 import { buildCollision } from '../collision.js';
 import { createMinimap } from '../minimap.js';
-import { FIRST_STREET } from '../city/layout.js';
+import { FIRST_STREET, pointInPolygon } from '../city/layout.js';
 
 // The Walk / Fly button: flying down to eye height and back up, the walls you
 // cannot pass, the minimap, and crisp shadows that follow the walker.
@@ -44,7 +44,14 @@ export function createWalkMode(app) {
     // which places connect to the streets, so we never start (or get stuck) inside a closed room
     const s = firstStreetStart();
     const t1 = performance.now();
-    collision.buildReach(app.world.onPlatform, s.x, s.z, [app.city.rects.lowerTown.outline, app.city.rects.citadel.outline]);
+    // spread from First Street and from the streets round the Great Bath, so both
+    // mounds are open to walk (and to jump to)
+    const { bath, pool } = app.city.plan;
+    collision.buildReach(
+      app.world.onPlatform,
+      [[s.x, s.z], [(pool.x0 + pool.x1) / 2, pool.z1 + 1.6], [(pool.x0 + pool.x1) / 2, pool.z0 - 1.6], [bath.x1 + 6, (bath.z0 + bath.z1) / 2], [bath.x0 - 6, (bath.z0 + bath.z1) / 2], [(bath.x0 + bath.x1) / 2, bath.z1 + 6], [(bath.x0 + bath.x1) / 2, bath.z0 - 6]],
+      [app.city.rects.lowerTown.outline, app.city.rects.citadel.outline]
+    );
     if (params.has('debug')) window.__walk.reachMs = performance.now() - t1;
     return collision;
   }
@@ -94,9 +101,11 @@ export function createWalkMode(app) {
         setShadowsAround(start.x, start.z, true);
         walk.enable(true);
         minimapEl.classList.add('on');
+        updateCross();
+        crossButton.hidden = false;
         hint.textContent = isTouch
-          ? 'Use the circle to walk · drag to look · tap the map to go there'
-          : 'W A S D to walk · drag to look · Shift to hurry · click the map to go there';
+          ? 'Use the circle to walk · drag to look · tap the map to go there · the Guide takes you to any place'
+          : 'W A S D to walk · drag to look · Shift to hurry · click the map to go there · the Guide takes you to any place';
         hint.classList.add('show');
         clearTimeout(hintTimer);
         hintTimer = setTimeout(() => hint.classList.remove('show'), 6000);
@@ -118,6 +127,7 @@ export function createWalkMode(app) {
     stage.walking = false;
     minimapEl.classList.remove('on');
     outButton.hidden = true;
+    crossButton.hidden = true;
     hint.classList.remove('show');
     const { world } = app;
     const p = walk.position.clone();
@@ -140,9 +150,9 @@ export function createWalkMode(app) {
 
   // move the walker to the nearest open place by (x, z), with a short fade
   const fade = document.getElementById('walk-fade');
-  function jumpTo(x, z, face = null) {
-    const spot = collision?.nearestReachable(x, z, 120);
-    if (!spot) return;
+  function jumpTo(x, z, face = null, maxR = 120) {
+    const spot = collision?.nearestReachable(x, z, maxR);
+    if (!spot) return false;
     fade.classList.add('on');
     setTimeout(() => {
       // face a point if asked (a person to talk to), otherwise keep looking the same way
@@ -150,8 +160,33 @@ export function createWalkMode(app) {
       walk.start(spot[0], spot[1], yaw, face ? 0.12 : walk.pitch);
       setShadowsAround(spot[0], spot[1], true);
       fade.classList.remove('on');
+      updateCross();
     }, 220);
+    return true;
   }
+
+  // the two mounds are not joined for walking (how people crossed between them is not
+  // known), so one button takes you across: up to the Great Bath, or down to First Street
+  const crossButton = document.getElementById('walk-cross');
+  const onCitadel = () => app.world && pointInPolygon(walk.position.x, walk.position.z, app.city.rects.citadel.outline);
+  function updateCross() {
+    const up = !onCitadel();
+    const label = up ? 'Go up to the Great Bath' : 'Go down to First Street';
+    if (crossButton.textContent !== label) crossButton.textContent = label;
+  }
+  crossButton.addEventListener('click', () => {
+    if (!stage.walking) return;
+    if (onCitadel()) {
+      const s = firstStreetStart();
+      jumpTo(s.x, s.z, [s.x + Math.sin(s.yaw) * -10, s.z + Math.cos(s.yaw) * -10]);
+    } else {
+      // stand at the end of the pool, on the paving by the steps, looking along it
+      const { pool, bath } = app.city.plan;
+      const cx = (pool.x0 + pool.x1) / 2;
+      const cz = (pool.z0 + pool.z1) / 2;
+      if (!jumpTo(cx, pool.z1 + 1.6, [cx, cz], 3)) jumpTo(bath.x1 + 5, (bath.z0 + bath.z1) / 2, [cx, cz], 40);
+    }
+  });
   // "Find a way out" shows when you stand somewhere not connected to the streets
   const outButton = document.getElementById('walk-out');
   outButton.addEventListener('click', () => jumpTo(walk.position.x, walk.position.z));
@@ -172,9 +207,9 @@ export function createWalkMode(app) {
   });
 
   app.walkPosition = () => walk.position;
-  app.walkJump = (x, z, face) => {
+  app.walkJump = (x, z, face, maxR) => {
     ensureCollision();
-    jumpTo(x, z, face);
+    return jumpTo(x, z, face, maxR);
   };
 
   return {
@@ -194,6 +229,7 @@ export function createWalkMode(app) {
         outButton.hidden = collision.reachable(p.x, p.z);
       }
       minimap.draw(p.x, p.z, walk.yaw);
+      if (outCheck === 0.5) updateCross();
       // keep crisp shadows around the walker
       if (Math.hypot(sun.target.position.x - p.x, sun.target.position.z - p.z) > 20) setShadowsAround(p.x, p.z, true);
     },
