@@ -407,9 +407,10 @@ function goToStation(craft, { walkJump = true } = {}) {
   // in front of the worker (they face +z in their own frame)
   const fx = Math.sin(st.yaw);
   const fz = Math.cos(st.yaw);
-  if (stage.walking && walkJump && app.walkJump) {
-    app.walkJump(st.x + fx * 2.4, st.z + fz * 2.4, [st.x, st.z]);
-    return;
+  // walking: step over to them on foot, but only when they are in the city near a
+  // street; people out in the fields (off the platforms) are reached by flying
+  if (stage.walking && walkJump && app.walkJump && app.world.onPlatform(st.x, st.z)) {
+    if (app.walkJump(st.x + fx * 2.4, st.z + fz * 2.4, [st.x, st.z], 25)) return;
   }
   const target = new THREE.Vector3(st.x, st.y + 0.7, st.z);
   flyTo({ position: clearViewOf(target, st.yaw), target });
@@ -450,10 +451,7 @@ function goToPerson(persona) {
     const c = app.bustle?.nearestCart(here.x, here.z);
     if (!c) return;
     app.bustle.focusCart(c.cart);
-    if (stage.walking && app.walkJump) {
-      app.walkJump(c.x + Math.sin(c.yaw) * 6, c.z + Math.cos(c.yaw) * 6, [c.x, c.z]);
-      return;
-    }
+    if (stage.walking && app.walkJump && app.walkJump(c.x + Math.sin(c.yaw) * 6, c.z + Math.cos(c.yaw) * 6, [c.x, c.z], 12)) return;
     const target = new THREE.Vector3(c.x, c.y + 1, c.z);
     flyTo({ target, position: target.clone().add(new THREE.Vector3(-Math.sin(c.yaw) * 14 + 6, 11, -Math.cos(c.yaw) * 14)) });
     return;
@@ -592,7 +590,7 @@ function goToPlace(id, { openInfo = true } = {}) {
   if (!v) return;
   setEra(v.era || living());
   // walking: go there on foot (a short fade) when the place is on the streets
-  if (stage.walking && !v.era && v.target && app.walkJump?.(v.target.x, v.target.z, [v.target.x, v.target.z], 60)) {
+  if (stage.walking && !v.era && v.target && app.world.onPlatform(v.target.x, v.target.z) && app.walkJump?.(v.target.x, v.target.z, [v.target.x, v.target.z], 60)) {
     if (openInfo) app.info.show(id, null);
     if (v.marks) markers?.show(v.marks, 12);
     return;
@@ -810,4 +808,4 @@ function renderFrame() {
   eras.endFrame();
   // leave the scene set to the chosen moment (for clicks)
   eras.apply();
-}
+} 
