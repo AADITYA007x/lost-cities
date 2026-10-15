@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 const EYE = 1.6;
 const WALK = 1.4; // m/s, an unhurried pace
-const HURRY = 3.6;
+const HURRY = 4.2;
 const RADIUS = 0.3;
 const STEP_UP = 0.7; // higher than this is a wall or a platform edge
 
@@ -86,6 +86,8 @@ export function createWalk({ camera, canvas, groundAt, onPlatform, joystickEl })
     stick.id = null;
     stick.x = 0;
     stick.y = 0;
+    stick.fast = false;
+    joystickEl.classList.remove('fast');
     knob.style.transform = '';
   };
   joystickEl.addEventListener('pointerup', endStick);
@@ -95,6 +97,9 @@ export function createWalk({ camera, canvas, groundAt, onPlatform, joystickEl })
     let dx = e.clientX - stick.cx;
     let dy = e.clientY - stick.cy;
     const d = Math.hypot(dx, dy);
+    // pushed out past the rim: hurry (like Shift on a keyboard)
+    stick.fast = d > max * 1.35;
+    joystickEl.classList.toggle('fast', stick.fast);
     if (d > max) {
       dx *= max / d;
       dy *= max / d;
@@ -167,7 +172,7 @@ export function createWalk({ camera, canvas, groundAt, onPlatform, joystickEl })
       f -= stick.y;
       s += stick.x;
       const mag = Math.min(1, Math.hypot(f, s));
-      const target = mag * (keys.has('fast') ? HURRY : WALK);
+      const target = mag * (keys.has('fast') || stick.fast ? HURRY : WALK);
       speedNow += (target - speedNow) * Math.min(1, dt * 6);
       if (mag > 0.01 && speedNow > 0.01) {
         forward.set(-Math.sin(yaw), 0, -Math.cos(yaw));

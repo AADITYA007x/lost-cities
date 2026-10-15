@@ -467,6 +467,12 @@ const chat = createChat({
   getContext: chatContext,
   onPersona: goToPerson,
   onSpeaking: (on) => sound.duck(on),
+  // on a phone the chat fills the lower half: lift the view so the resident stays in
+  // the upper half, above it
+  onOpenChange: (on) => {
+    if (guide?.touring) return;
+    stage.setLift(on && stage.portrait() ? 0.26 : 0);
+  },
 });
 if (params.has('chat')) setTimeout(() => chat.open(true), 500);
 
@@ -608,6 +614,7 @@ const guide = createGuide({
   features: FEATURES,
   searchWords: SEARCH_WORDS,
   onPlace: (id) => goToPlace(id),
+  onHome: () => goHome(),
   onStart: () => {
     beforeTour = { era: eras?.current || 'height', mode: certainty?.mode || 'alive' };
     chat.open(false);
@@ -680,17 +687,39 @@ certaintyBox.addEventListener('click', (e) => {
   });
 });
 
-// double-click / double-tap: glide back to the home view
-let lastTap = 0;
-stage.canvas.addEventListener('pointerup', (e) => {
-  if (!controls.enabled || stage.walking) return;
-  const now = performance.now();
-  if (now - lastTap < 320 && e.isPrimary) {
-    controls.enabled = false;
-    flight.to({ position: app.home.position, target: app.home.target, duration: 3 }, () => (controls.enabled = true));
-  }
-  lastTap = now;
+// a true double-click (mouse only) glides back to the view of the whole city. It used
+// to react to any two quick pointer-ups, so the end of a drag or a two-finger pinch
+// could send the view flying out; now both clicks must be short, still and close.
+// On touch screens it is off (it clashed with pinching): the Guide has "Whole city".
+let lastClick = null;
+let press = null;
+stage.canvas.addEventListener('pointerdown', (e) => {
+  press = e.isPrimary && e.pointerType === 'mouse' && e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
 });
+stage.canvas.addEventListener('pointerup', (e) => {
+  if (!press || e.pointerType !== 'mouse' || !controls.enabled || stage.walking) {
+    lastClick = null;
+    return;
+  }
+  const now = performance.now();
+  const still = Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && now - press.t < 300;
+  press = null;
+  if (!still) {
+    lastClick = null;
+    return;
+  }
+  if (lastClick && now - lastClick.t < 380 && Math.hypot(e.clientX - lastClick.x, e.clientY - lastClick.y) < 24) {
+    lastClick = null;
+    goHome();
+    return;
+  }
+  lastClick = { x: e.clientX, y: e.clientY, t: now };
+});
+function goHome() {
+  if (!app.home) return;
+  app.info?.close();
+  flyTo({ position: app.home.position, target: app.home.target }, { duration: 3 });
+}
 
 init().catch((err) => {
   console.error(err);

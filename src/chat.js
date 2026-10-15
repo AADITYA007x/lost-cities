@@ -45,7 +45,7 @@ function splitToday(text) {
   return { said: m[1].trim(), today: m[2].trim() };
 }
 
-export function createChat({ panel, button, getContext, onPersona, onSpeaking }) {
+export function createChat({ panel, button, getContext, onPersona, onSpeaking, onOpenChange }) {
   panel.innerHTML = `
     <div class="chat-head">
       <div>
@@ -71,6 +71,9 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
       <button type="submit" aria-label="Send">Ask</button>
     </form>
   `;
+  // on a phone the note is cut to two lines: tap it to read it all
+  const note = panel.querySelector('.chat-note');
+  note.addEventListener('click', () => note.classList.toggle('full'));
   const log = panel.querySelector('.chat-log');
   const form = panel.querySelector('.chat-form');
   const input = form.querySelector('input');
@@ -241,6 +244,7 @@ export function createChat({ panel, button, getContext, onPersona, onSpeaking })
       if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => input.focus({ preventScroll: true }), 300);
     }
     if (!on) stopSpeaking();
+    if (on !== was) onOpenChange?.(on);
   }
   button.addEventListener('click', () => open(!panel.classList.contains('open')));
   panel.querySelector('.close').addEventListener('click', () => open(false));

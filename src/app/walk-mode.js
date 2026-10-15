@@ -105,7 +105,7 @@ export function createWalkMode(app) {
         updateCross();
         crossButton.hidden = false;
         hint.textContent = isTouch
-          ? 'Use the circle to walk · drag to look · tap the map to go there · the Guide takes you to any place'
+          ? 'Use the circle to walk; push past its edge to hurry · drag to look · tap the map to go there'
           : 'W A S D to walk · drag to look · Shift to hurry · click the map to go there · the Guide takes you to any place';
         hint.classList.add('show');
         clearTimeout(hintTimer);

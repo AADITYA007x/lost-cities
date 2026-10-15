@@ -11,7 +11,7 @@ const fold = (s) =>
     .replace(/[̀-ͯ]/g, '')
     .replace(/[“”"‘’'()]/g, '');
 
-export function createGuide({ button, panel, card, tour, groups, features, searchWords = {}, onPlace, onStart, onStep, onMore, onEnd }) {
+export function createGuide({ button, panel, card, tour, groups, features, searchWords = {}, onPlace, onHome, onStart, onStep, onMore, onEnd }) {
   // ---------- the panel ----------
   const entries = groups.map((g) => ({
     title: g.title,
@@ -36,6 +36,7 @@ export function createGuide({ button, panel, card, tour, groups, features, searc
       <span>Take the tour</span>
       <small>${tour.length} stops · about ten minutes</small>
     </button>
+    <button type="button" class="guide-home">View the whole city</button>
     <label class="guide-search">
       <span class="sr-only">Search places</span>
       <input type="search" placeholder="Search: bath, beads, seals…" autocomplete="off" />
@@ -77,6 +78,11 @@ export function createGuide({ button, panel, card, tour, groups, features, searc
     stopTour();
     open(false);
     onPlace(b.dataset.place);
+  });
+  panel.querySelector('.guide-home').addEventListener('click', () => {
+    stopTour();
+    open(false);
+    onHome?.();
   });
   panel.querySelector('.guide-tour').addEventListener('click', () => {
     open(false);
