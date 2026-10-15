@@ -317,7 +317,7 @@ export function createBustle({ city, world, life, lowPower, fieldPlan }) {
   }
 
   // trees along field edges and near the river (which trees is not known)
-  const trunk = new THREE.CylinderGeometry(0.25, 0.35, 4, 6).translate(0, 2, 0);
+  const trunk = new THREE.CylinderGeometry(0.25, 0.35, 4.6, 6).translate(0, 1.7, 0); // reaches 0.6 m into the ground, so no tree floats
   const crown = new THREE.IcosahedronGeometry(3.2, 1).scale(1.15, 0.8, 1.15).translate(0, 5.6, 0);
   const nTrees = lowPower ? 140 : 320;
   const trees = [];

@@ -134,14 +134,23 @@ export function buildCitadel(rect, plan, rng, out, { detail, covered = [] }) {
         walls.box(bx, podiumTop, bz, bx + bw, podiumTop + 1.7, bz + bd, I);
       }
     }
-    // a timber hall above the blocks is a guess; shown as a light roof on posts
+    // a timber hall above the blocks is a guess; shown as a light roof on posts.
+    // The posts stand in the passages between the blocks, down to the passage floor
+    // (on the podium where the hall is generated, on the ground where it is traced),
+    // so nothing hangs in the air.
     const hallRoof = podiumTop + 1.7 + 3.2;
     for (let i = 0; i <= cols; i += 3) {
-      for (let j = 0; j <= rows; j += 3) {
+      for (let j = 0; j <= rows; j++) {
         const px = hall.x0 + gap / 2 + i * (bw + gap) - 0.2;
         const pz = hall.z0 + gap / 2 + j * (bd + gap) - 0.2;
-        roofs.box(px, podiumTop + 1.7, pz, px + 0.4, hallRoof, pz + 0.4, M);
+        const floor = px + 0.4 <= clipX1 ? podiumTop : y;
+        roofs.box(px, floor, pz, px + 0.4, hallRoof, pz + 0.4, M);
       }
+    }
+    // the posts also stand at the far ends, so the roof's edges rest on something
+    for (const pz of [hall.z0 + gap / 2 - 0.2, hall.z1 - gap / 2 - 0.2]) {
+      const px = hall.x1 - 0.6;
+      roofs.box(px, px + 0.4 <= clipX1 ? podiumTop : y, pz, px + 0.4, hallRoof, pz + 0.4, M);
     }
     roofs.box(hall.x0 - 0.5, hallRoof, hall.z0 - 0.5, hall.x1 + 0.5, hallRoof + 0.3, hall.z1 + 0.5, M);
   }
